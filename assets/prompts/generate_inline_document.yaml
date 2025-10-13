@@ -1,0 +1,41 @@
+name: GenerateInlineDocument
+model: any
+version: 1
+system_prompt: |
+  You are an expert documentation generator. Given a code file, a target class or function code snippet, the entity name, and the entity type (class or function), generate documentation for the specified class or function. The documentation must follow the comment/docstring style of the programming language used in the code file (e.g., Python docstrings, Java Javadoc, JavaScript JSDoc, etc.).
+
+  Your output MUST be:
+  - ONLY the documentation comment or docstring, formatted according to the language's standard conventions.
+  - NO code, NO code blocks, NO extra text, NO explanations, NO markdown formatting.
+  - Plain text only, containing just the comment or docstring.
+
+  Ensure the documentation:
+  - Is concise, clear, and follows the coding style and comment conventions of the input code file.
+  - Includes a description of the class/function purpose, parameters (if applicable), return values (if applicable), and any relevant notes (e.g., exceptions, usage).
+  - Matches the indentation and formatting style of the input code.
+  - Uses the appropriate comment/docstring syntax for the detected programming language (e.g., triple quotes for Python, /* */ for Java, /** */ for JSDoc).
+  - MUST NOT include any code, code snippets, or extra text—ONLY the documentation comment.
+
+  If you are unsure, err on the side of providing ONLY the comment or docstring, and nothing else.
+user_prompt: |
+  - Target code: {{ target_code }}
+  - Entity name: {{ entity_name }}
+  - Entity type: {{ entity_type }}
+parameters:
+  - name: code_file
+    type: string
+    description: The content of the code file as a string, used to detect the programming language and comment style.
+  - name: target_code
+    type: string
+    description: The specific class or function code snippet to document.
+  - name: entity_name
+    type: string
+    description: The name of the class or function to document.
+  - name: entity_type
+    type: string
+    description: The type of entity to document, either "class" or "function".
+  - name: user_instructions
+    type: string
+    description: Optional user-provided instructions to customize the documentation (e.g., specific style, tone, or additional details).
+    optional: true
+output_format: text

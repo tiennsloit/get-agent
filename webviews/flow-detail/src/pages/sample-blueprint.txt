@@ -1,0 +1,520 @@
+# In-App Purchase Integration Blueprint
+
+## Overview
+This blueprint outlines the implementation plan for integrating in-app purchases into a mobile application using a platform-appropriate library (RevenueCat for cross-platform or platform-specific StoreKit/Billing Library). The implementation will handle product fetching, purchase flow, receipt validation, and subscription status management.
+
+## Current Architecture Analysis
+
+The current application architecture consists of:
+
+### Application Layer
+- **Main Application**: Core business logic and UI components
+- **State Management**: Current state management solution (Redux, Provider, Bloc, etc.)
+- **Navigation**: App navigation structure
+- **Dependency Management**: Current dependency injection approach
+
+### External Services
+- **Backend API**: Existing server infrastructure
+- **Analytics**: Current analytics integration
+- **Crash Reporting**: Error tracking system
+
+## Architecture Design
+
+### Component Interaction Flow
+
+```mermaid
+graph TD
+    A[UI Components] -->|User Actions| B[Purchase Bloc/Cubit]
+    B -->|API Calls| C[IAP Service]
+    C -->|Native Bridge| D[Platform-Specific IAP Library]
+    D -->|Store Communication| E[App Store/Play Store]
+    
+    C -->|Receipt Validation| F[Backend API]
+    F -->|Validation Response| C
+    
+    C -->|Purchase Events| B
+    B -->|State Updates| A
+    
+    C -->|Analytics Events| G[Analytics Service]
+    C -->|Error Events| H[Crash Reporting]
+```
+
+### Data Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant UI as UI Component
+    participant BLOC as Purchase Bloc
+    participant IAP as IAP Service
+    participant Store as App Store
+    participant Backend as Backend API
+    
+    UI->>BLOC: User initiates purchase
+    BLOC->>IAP: purchaseProduct(productId)
+    IAP->>Store: initiatePurchaseFlow()
+    Store-->>UI: Native purchase UI
+    UI->>Store: User completes purchase
+    Store-->>IAP: purchaseCompleted(response)
+    IAP->>IAP: validateReceipt()
+    IAP->>Backend: validateReceipt(receipt)
+    Backend-->>IAP: validationResult
+    IAP->>BLOC: purchaseSuccess(product)
+    BLOC->>UI: Update UI state
+    IAP->>Analytics: logPurchase(event)
+```
+
+## IAP Service Implementation
+
+### Service Interface
+
+```typescript
+interface IIAPService {
+  // Initialization
+  initialize(): Promise<boolean>;
+  
+  // Product Management
+  fetchProducts(productIds: string[]): Promise<IAPProduct[]>;
+  getProducts(): IAPProduct[];
+  
+  // Purchase Flow
+  purchaseProduct(productId: string): Promise<PurchaseResult>;
+  restorePurchases(): Promise<PurchaseRestorationResult>;
+  
+  // Subscription Management
+  checkSubscriptionStatus(): Promise<SubscriptionStatus>;
+  getActiveSubscriptions(): Promise<ActiveSubscription[]>;
+  
+  // Receipt Validation
+  validateReceipt(receipt: string): Promise<ValidationResult>;
+  
+  // Event Listeners
+  addEventListener(event: IAPEvent, callback: EventCallback): void;
+  removeEventListener(event: IAPEvent, callback: EventCallback): void;
+}
+```
+
+### Service Architecture
+
+```mermaid
+classDiagram
+    class IAPService {
+        -products: IAPProduct[]
+        -isInitialized: boolean
+        -eventListeners: Map~IAPEvent, EventCallback[]~
+        +initialize(): Promise~boolean~
+        +fetchProducts(productIds: string[]): Promise~IAPProduct[]~
+        +purchaseProduct(productId: string): Promise~PurchaseResult~
+        +restorePurchases(): Promise~PurchaseRestorationResult~
+        +validateReceipt(receipt: string): Promise~ValidationResult~
+        +addEventListener(event: IAPEvent, callback: EventCallback): void
+        +removeEventListener(event: IAPEvent, callback: EventCallback): void
+        -handlePurchaseSuccess(purchase: Purchase): void
+        -handlePurchaseError(error: Error): void
+        -emitEvent(event: IAPEvent, data: any): void
+    }
+    
+    class PlatformIAPWrapper {
+        +init(): Promise~boolean~
+        +fetchProducts(productIds: string[]): Promise~PlatformProduct[]~
+        +purchase(productId: string): Promise~PlatformPurchaseResult~
+        +restorePurchases(): Promise~PlatformRestorationResult~
+        +getReceipt(): Promise~string~
+    }
+    
+    class ReceiptValidator {
+        +validate(receipt: string): Promise~ValidationResult~
+        -validateLocally(receipt: string): boolean
+        -validateWithBackend(receipt: string): Promise~BackendValidationResult~
+    }
+    
+    IAPService --> PlatformIAPWrapper
+    IAPService --> ReceiptValidator
+```
+
+## State Management Implementation
+
+### Purchase State Structure
+
+```typescript
+interface PurchaseState {
+  products: IAPProduct[];
+  availableProducts: IAPProduct[];
+  purchasedProducts: string[];
+  activeSubscriptions: ActiveSubscription[];
+  isLoading: boolean;
+  error: string | null;
+  restorationInProgress: boolean;
+}
+
+enum PurchaseEvent {
+  productsLoaded,
+  purchaseInitiated,
+  purchaseCompleted,
+  purchaseFailed,
+  restorationStarted,
+  restorationCompleted,
+  restorationFailed,
+  subscriptionStatusUpdated
+}
+```
+
+### BLoC/Cubit Implementation
+
+```typescript
+class PurchaseBloc extends Bloc<PurchaseEvent, PurchaseState> {
+  final IIAPService iapService;
+  
+  PurchaseBloc(this.iapService) : super(PurchaseState.initial()) {
+    // Set up event listeners
+    iapService.addEventListener(IAPEvent.productsUpdated, _handleProductsUpdated);
+    iapService.addEventListener(IAPEvent.purchaseSuccess, _handlePurchaseSuccess);
+    iapService.addEventListener(IAPEvent.purchaseError, _handlePurchaseError);
+  }
+  
+  Future<void> loadProducts() async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      await iapService.fetchProducts(_getProductIds());
+      add(PurchaseEvent.productsLoaded);
+    } catch (error) {
+      emit(state.copyWith(error: error.toString(), isLoading: false));
+    }
+  }
+  
+  Future<void> purchaseProduct(String productId) async {
+    emit(state.copyWith(isLoading: true));
+    add(PurchaseEvent.purchaseInitiated);
+    try {
+      await iapService.purchaseProduct(productId);
+    } catch (error) {
+      add(PurchaseEvent.purchaseFailed);
+    }
+  }
+  
+  // Additional event handlers and methods...
+}
+```
+
+## Platform-Specific Implementation
+
+### iOS Implementation (StoreKit)
+
+```swift
+class iOSIAPWrapper: NSObject, SKProductsRequestDelegate, SKPaymentTransactionObserver {
+    private var productsRequest: SKProductsRequest?
+    private var completionHandlers: [String: (Result<PlatformProduct, Error>) -> Void] = [:]
+    
+    override init() {
+        super.init()
+        SKPaymentQueue.default().add(self)
+    }
+    
+    func fetchProducts(productIds: [String]) async throws -> [PlatformProduct] {
+        // Implementation using StoreKit 2
+        let storeProducts = try await Product.products(for: productIds)
+        return storeProducts.map { storeProduct in
+            return PlatformProduct(
+                id: storeProduct.id,
+                price: storeProduct.price,
+                localizedPrice: storeProduct.displayPrice,
+                title: storeProduct.displayName,
+                description: storeProduct.description
+            )
+        }
+    }
+    
+    func purchase(productId: String) async throws -> PlatformPurchaseResult {
+        guard let product = try await Product.products(for: [productId]).first else {
+            throw IAPError.productNotFound
+        }
+        
+        let result = try await product.purchase()
+        switch result {
+        case .success(let verification):
+            let transaction = try checkVerified(verification)
+            await transaction.finish()
+            return PlatformPurchaseResult(success: true, transactionId: transaction.id)
+        case .pending:
+            throw IAPError.purchasePending
+        case .userCancelled:
+            throw IAPError.purchaseCancelled
+        default:
+            throw IAPError.unknownError
+        }
+    }
+    
+    // Additional StoreKit implementation...
+}
+```
+
+### Android Implementation (Billing Library)
+
+```kotlin
+class AndroidIAPWrapper(context: Context) : PurchasesUpdatedListener {
+    private val billingClient: BillingClient = BillingClient.newBuilder(context)
+        .setListener(this)
+        .enablePendingPurchases()
+        .build()
+    
+    private var connected = false
+    
+    init {
+        startConnection()
+    }
+    
+    private fun startConnection() {
+        billingClient.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(billingResult: BillingResult) {
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    connected = true
+                }
+            }
+            
+            override fun onBillingServiceDisconnected() {
+                connected = false
+            }
+        })
+    }
+    
+    suspend fun fetchProducts(productIds: List<String>): List<PlatformProduct> {
+        return withContext(Dispatchers.IO) {
+            val params = SkuDetailsParams.newBuilder()
+                .setSkusList(productIds)
+                .setType(BillingClient.SkuType.INAPP)
+                .build()
+            
+            val skuDetailsResult = billingClient.querySkuDetails(params)
+            skuDetailsResult.skuDetailsList?.map { skuDetails ->
+                PlatformProduct(
+                    id = skuDetails.sku,
+                    price = skuDetails.price,
+                    localizedPrice = skuDetails.price,
+                    title = skuDetails.title,
+                    description = skuDetails.description
+                )
+            } ?: emptyList()
+        }
+    }
+    
+    // Additional Billing Library implementation...
+}
+```
+
+## Receipt Validation Strategy
+
+### Validation Service
+
+```typescript
+class ReceiptValidationService {
+  private readonly localValidationKey: string;
+  private readonly backendValidationUrl: string;
+  
+  async validate(receipt: string): Promise<ValidationResult> {
+    // First try local validation for immediate response
+    const localValidation = this.validateLocally(receipt);
+    if (localValidation.isValid) {
+      return localValidation;
+    }
+    
+    // Fall back to server validation
+    try {
+      return await this.validateWithBackend(receipt);
+    } catch (error) {
+      // Log error but don't block user flow
+      console.error('Receipt validation failed:', error);
+      return { isValid: true, reason: 'validation_error' }; // Fail open
+    }
+  }
+  
+  private validateLocally(receipt: string): ValidationResult {
+    // Implement basic local checks
+    // Check receipt format, expiration (if possible), etc.
+    return { isValid: true, reason: 'valid' };
+  }
+  
+  private async validateWithBackend(receipt: string): Promise<ValidationResult> {
+    const response = await fetch(this.backendValidationUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ receipt })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Validation request failed: ${response.status}`);
+    }
+    
+    return response.json();
+  }
+}
+```
+
+## UI Component Implementation
+
+### Product List Component
+
+```dart
+class ProductList extends StatelessWidget {
+  final List<IAPProduct> products;
+  final Function(String) onPurchase;
+  final bool isLoading;
+  
+  const ProductList({required this.products, required this.onPurchase, this.isLoading = false});
+  
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    return ListView.builder(
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        final product = products[index];
+        return ProductCard(
+          product: product,
+          onTap: () => onPurchase(product.id),
+        );
+      },
+    );
+  }
+}
+
+class ProductCard extends StatelessWidget {
+  final IAPProduct product;
+  final VoidCallback onTap;
+  
+  const ProductCard({required this.product, required this.onTap});
+  
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        title: Text(product.title),
+        subtitle: Text(product.description),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(product.localizedPrice),
+            if (product.isSubscription) 
+              Text('Subscription', style: Theme.of(context).textTheme.caption),
+          ],
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+```
+
+## Testing Strategy
+
+### Unit Tests
+- **IAP Service**: Test initialization, product fetching, purchase flow
+- **Receipt Validation**: Test local and remote validation scenarios
+- **State Management**: Test BLoC/Cubit state transitions
+- **Platform Wrappers**: Test platform-specific implementations
+
+### Integration Tests
+- **Purchase Flow**: Test complete purchase journey
+- **Restoration Flow**: Test purchase restoration process
+- **Error Handling**: Test various error scenarios
+
+### Mock Implementations
+```typescript
+class MockIAPService implements IIAPService {
+  private mockProducts: IAPProduct[] = [
+    {
+      id: 'premium_monthly',
+      price: 4.99,
+      localizedPrice: '$4.99',
+      title: 'Premium Monthly',
+      description: 'Monthly subscription to premium features',
+      isSubscription: true
+    }
+  ];
+  
+  async initialize(): Promise<boolean> {
+    return true;
+  }
+  
+  async fetchProducts(productIds: string[]): Promise<IAPProduct[]> {
+    return this.mockProducts.filter(product => 
+      productIds.includes(product.id)
+    );
+  }
+  
+  async purchaseProduct(productId: string): Promise<PurchaseResult> {
+    await Future.delay(500); // Simulate network delay
+    return { success: true, transactionId: 'mock_transaction_id' };
+  }
+  
+  // Additional mock implementations...
+}
+```
+
+## Migration and Deployment Strategy
+
+### Phase 1: Setup and Configuration
+1. Add IAP library dependencies (RevenueCat or platform-specific)
+2. Configure app stores (App Store Connect, Google Play Console)
+3. Set up products and subscriptions in store consoles
+
+### Phase 2: Core Implementation
+1. Implement platform-specific IAP wrappers
+2. Create IAP service with unified interface
+3. Implement receipt validation service
+
+### Phase 3: State Management Integration
+1. Create purchase state management (BLoC/Cubit)
+2. Integrate with existing app state
+3. Implement UI components for products and purchases
+
+### Phase 4: Testing and Validation
+1. Implement comprehensive test suite
+2. Conduct sandbox testing on both platforms
+3. Validate receipt handling with backend
+
+### Phase 5: Deployment
+1. Gradual rollout to users
+2. Monitor purchase metrics and errors
+3. Implement analytics tracking for purchase events
+
+## Error Handling and Analytics
+
+### Error Tracking
+```typescript
+class IAPErrorHandler {
+  static handlePurchaseError(error: Error, context: any) {
+    // Log to analytics
+    AnalyticsService.logEvent('purchase_error', {
+      error: error.message,
+      productId: context?.productId,
+      platform: Platform.OS
+    });
+    
+    // Report to crash reporting
+    CrashReporting.recordError(error, context);
+    
+    // Show user-friendly message
+    if (error instanceof PurchaseError) {
+      showErrorDialog(error.userMessage);
+    } else {
+      showErrorDialog('An unexpected error occurred during purchase.');
+    }
+  }
+}
+```
+
+### Analytics Events
+```typescript
+const IAPAnalyticsEvents = {
+  PRODUCTS_LOADED: 'iap_products_loaded',
+  PURCHASE_INITIATED: 'iap_purchase_initiated',
+  PURCHASE_COMPLETED: 'iap_purchase_completed',
+  PURCHASE_FAILED: 'iap_purchase_failed',
+  RESTORATION_INITIATED: 'iap_restoration_initiated',
+  RESTORATION_COMPLETED: 'iap_restoration_completed',
+  SUBSCRIPTION_RENEWED: 'iap_subscription_renewed',
+  RECEIPT_VALIDATION_FAILED: 'iap_receipt_validation_failed'
+};
+```

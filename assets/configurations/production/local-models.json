@@ -1,0 +1,39 @@
+{
+  "version": "0.0.1",
+  "values": {
+    "embedding": {
+      "id": "EMBEDDING_MODEL",
+      "fileName": "all-MiniLM-L6-v2.gguf",
+      "fileSize": 21000000,
+      "name": "all-MiniLM-L6-v2",
+      "description": "A compact embedding model for efficient feature extraction and search tasks.",
+      "downloadUrl": "https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF/resolve/main/all-MiniLM-L6-v2-Q4_K_M.gguf"
+    },
+    "llm": [
+      {
+        "id": "base-model",
+        "fileName": "base-model.gguf",
+        "fileSize": 360267776,
+        "name": "Base Model",
+        "description": "Ultra-lightweight coding assistant. Perfect for low-end devices and quick code suggestions.",
+        "downloadUrl": "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf"
+      },
+      {
+        "id": "standard-model",
+        "fileName": "standard-model.gguf",
+        "fileSize": 1031060480,
+        "name": "Standard Model",
+        "description": "Recommended for most modern machines. Lightweight and efficient coding companion.",
+        "downloadUrl": "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf"
+      },
+      {
+        "id": "advanced-model",
+        "fileName": "advanced-model.gguf",
+        "fileSize": 1597790304,
+        "name": "Advanced Model",
+        "description": "Best suited for powerful machines. Offers enhanced coding capabilities and reasoning.",
+        "downloadUrl": "https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/qwen2.5-coder-3b-instruct-q4_k_m.gguf"
+      }
+    ]
+  }
+}

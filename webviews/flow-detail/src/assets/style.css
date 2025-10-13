@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+html {
+  scrollbar-width: none !important;
+  scrollbar-color: transparent !important;
+}
+
+body {
+  padding: 0 !important;
+  --vscode-textPreformat-background: transparent !important;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 0px !important;
+  outline-offset: 0px !important;
+}
+
+.vue-markdown {
+  font-family: 'Fira Code', 'Source Code Pro', monospace;
+}

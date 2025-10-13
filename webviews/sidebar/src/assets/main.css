@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+html {
+  scrollbar-width: none !important;
+  scrollbar-color: transparent !important;
+}
+
+body {
+  padding: 0 !important;
+  --vscode-textPreformat-background: transparent !important;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 0px !important;
+  outline-offset: 0px !important;
+}
+
+.markdown-viewer {
+
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  li {
+    margin-bottom: 10px;
+  }
+}
+
+pre>code {
+  font-size: 12px;
+  padding: 12px;
+  display: block;
+}
+
+.hljs {
+  background-color: transparent !important;
+  --vscode-textPreformat-background: transparent !important;
+}
+
+.chat-name {
+  color: var(--vscode-descriptionForeground);
+}
+
+.chat-avatar {
+  background-color: var(--vscode-descriptionForeground);
+}
+
+/* Pattern highlight styles */
+.context-pattern {
+  color: var(--vscode-minimap-infoHighlight);
+  display: inline-block;
+  border-radius: 6px;
+  text-decoration: underline;
+}
+
+.command-pattern {
+  color: var(--vscode-minimap-warningHighlight);
+  display: inline-block;
+  border-radius: 6px;
+  text-decoration: underline;
+}
+
+.context-pattern-block {
+  color: var(--vscode-minimap-infoHighlight);
+  display: inline-block;
+  text-decoration: underline;
+}
+
+.command-pattern-block {
+  color: var(--vscode-minimap-warningHighlight);
+  display: inline-block;
+  text-decoration: underline;
+}
+
+.border-gray {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.border-gray-light {
+  border-color: rgba(0, 0, 0, .5) !important;
+}
+
+.vue-tooltip {
+  &::after {
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 200px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: opacity 0.3s ease;
+    background: rgb(64, 64, 64);
+    color: white;
+  }
+  &__primary::after {
+    background: rgb(64, 64, 64);
+    border: 1px solid white;
+    border-radius: 4px;
+    color: white;
+  }
+  &__secondary::after {
+    background: rgb(64, 64, 64);
+    border: 1px solid white;
+    border-radius: 4px;
+    color: white;
+  }
+  &__accent::after {
+    background: rgb(64, 64, 64);
+    border: 1px solid white;
+    border-radius: 4px;
+    color: white;
+  }
+}

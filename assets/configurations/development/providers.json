@@ -1,0 +1,145 @@
+{
+    "version": "0.0.1",
+    "values": [
+        {
+            "id": "deepseek",
+            "name": "DeepSeek",
+            "configuration": {
+                "apiUrl": "https://api.deepseek.com",
+                "apiKey": "sk-36b3258567da4065aab07b7ccc0f67f3"
+            },
+            "models": [
+                {
+                    "id": "deepseek-chat",
+                    "name": "deepseek-chat",
+                    "enabled": true
+                },
+                {
+                    "id": "deepseek-reasoner",
+                    "name": "deepseek-reasoner",
+                    "enabled": true
+                }
+            ]
+        },
+        {
+            "id": "groq",
+            "name": "Groq",
+            "configuration": {
+                "apiUrl": "https://api.groq.com/openai/v1",
+                "apiKey": "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"
+            },
+            "models": [
+                {
+                    "id": "gemma2-9b-it",
+                    "name": "gemma2-9b-it",
+                    "enabled": true
+                },
+                {
+                    "id": "mistral-saba-24b",
+                    "name": "mistral-saba-24b",
+                    "enabled": true
+                },
+                {
+                    "id": "moonshotai/kimi-k2-instruct",
+                    "name": "moonshotai/kimi-k2-instruct",
+                    "enabled": true
+                },
+                {
+                    "id": "playai-tts",
+                    "name": "playai-tts",
+                    "enabled": true
+                },
+                {
+                    "id": "llama-3.3-70b-versatile",
+                    "name": "llama-3.3-70b-versatile",
+                    "enabled": true
+                },
+                {
+                    "id": "meta-llama/llama-guard-4-12b",
+                    "name": "meta-llama/llama-guard-4-12b",
+                    "enabled": true
+                },
+                {
+                    "id": "compound-beta-mini",
+                    "name": "compound-beta-mini",
+                    "enabled": true
+                },
+                {
+                    "id": "llama-3.1-8b-instant",
+                    "name": "llama-3.1-8b-instant",
+                    "enabled": true
+                },
+                {
+                    "id": "meta-llama/llama-prompt-guard-2-86m",
+                    "name": "meta-llama/llama-prompt-guard-2-86m",
+                    "enabled": true
+                },
+                {
+                    "id": "meta-llama/llama-prompt-guard-2-22m",
+                    "name": "meta-llama/llama-prompt-guard-2-22m",
+                    "enabled": true
+                },
+                {
+                    "id": "allam-2-7b",
+                    "name": "allam-2-7b",
+                    "enabled": true
+                },
+                {
+                    "id": "qwen/qwen3-32b",
+                    "name": "qwen/qwen3-32b",
+                    "enabled": true
+                },
+                {
+                    "id": "deepseek-r1-distill-llama-70b",
+                    "name": "deepseek-r1-distill-llama-70b",
+                    "enabled": true
+                },
+                {
+                    "id": "playai-tts-arabic",
+                    "name": "playai-tts-arabic",
+                    "enabled": false
+                },
+                {
+                    "id": "distil-whisper-large-v3-en",
+                    "name": "distil-whisper-large-v3-en",
+                    "enabled": false
+                },
+                {
+                    "id": "meta-llama/llama-4-maverick-17b-128e-instruct",
+                    "name": "meta-llama/llama-4-maverick-17b-128e-instruct",
+                    "enabled": true
+                },
+                {
+                    "id": "compound-beta",
+                    "name": "compound-beta",
+                    "enabled": true
+                },
+                {
+                    "id": "llama3-70b-8192",
+                    "name": "llama3-70b-8192",
+                    "enabled": true
+                },
+                {
+                    "id": "llama3-8b-8192",
+                    "name": "llama3-8b-8192",
+                    "enabled": true
+                },
+                {
+                    "id": "whisper-large-v3",
+                    "name": "whisper-large-v3",
+                    "enabled": false
+                },
+                {
+                    "id": "meta-llama/llama-4-scout-17b-16e-instruct",
+                    "name": "meta-llama/llama-4-scout-17b-16e-instruct",
+                    "enabled": true
+                },
+                {
+                    "id": "whisper-large-v3-turbo",
+                    "name": "whisper-large-v3-turbo",
+                    "enabled": false
+                }
+            ]
+        }
+    ]
+}

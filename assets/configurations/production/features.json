@@ -1,0 +1,45 @@
+{
+    "version": "0.0.1",
+    "values": [
+        {
+            "id": "chat",
+            "name": "Chat",
+            "description": "Engages in a conversation with the AI, offering insights and suggestions.",
+            "enabled": true,
+            "disableable": false,
+            "model": null
+        },
+        {
+            "id": "autocomplete",
+            "name": "Autocomplete",
+            "description": "Provides inline code suggestions as you type, enhancing development speed.",
+            "enabled": false,
+            "disableable": true,
+            "model": null
+        },
+        {
+            "id": "codeCompletion",
+            "name": "Code Completion",
+            "description": "Offers full-function or block-level code completions based on context.",
+            "enabled": false,
+            "disableable": true,
+            "model": null
+        },
+        {
+            "id": "commitMessageSuggestion",
+            "name": "Commit Message Suggestion",
+            "description": "Suggests commit messages based on code changes.",
+            "enabled": false,
+            "disableable": true,
+            "model": null
+        },
+        {
+            "id": "misc",
+            "name": "MISC",
+            "description": "Miscellaneous small features and experimental enhancements that improve user experience.",
+            "enabled": true,
+            "disableable": true,
+            "model": null
+        }
+    ]
+}
