@@ -38,22 +38,6 @@ If your extension contributes settings through the VS Code `contributes.configur
 
 ---
 
-## API Keys for Testing (Local Development Only)
-
-The following API keys are for development and testing purposes. **Do not commit real production API keys.**
-
-### DeepSeek API  
-- **API URL:** `https://api.deepseek.com`  
-- **API Key:** `sk-36b3258567da4065aab07b7ccc0f67f3`
-
-### Groq API  
-- **API URL:** `https://api.groq.com/openai/v1`  
-- **API Key:** `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`
-
-> ⚠️ **Important:** Remove or rotate these keys before publishing your extension.
-
----
-
 ## Known Issues
 
 Document any known issues or limitations here to help users avoid confusion and reduce duplicate bug reports.
