@@ -4,6 +4,7 @@ import * as path from 'path';
 import { EmbeddingManager } from "./embeddingManager";
 import { ParserManager } from "./parserManager";
 import { QueryManager } from "./queryManager";
+import { CodeStructureManager } from "./codeStructureManager";
 import { getFilesInWorkspace } from "../../core/utilities/fileUtils";
 import { inject } from "inversify";
 import { INJECTION_KEYS } from "../../core/constants/injectionKeys";
@@ -12,6 +13,7 @@ export class ContextManager {
   private embeddingManager: EmbeddingManager;
   private parserManager: ParserManager;
   private queryManager: QueryManager;
+  private codeStructureManager: CodeStructureManager;
   private watcher: vscode.FileSystemWatcher;
 
   constructor(
@@ -20,6 +22,7 @@ export class ContextManager {
     this.parserManager = new ParserManager(this.context);
     this.embeddingManager = new EmbeddingManager(this.context);
     this.queryManager = new QueryManager(this.embeddingManager);
+    this.codeStructureManager = new CodeStructureManager(this.context);
     this.watcher = vscode.workspace.createFileSystemWatcher(
       "**/*.{*}",
       true,
@@ -46,6 +49,9 @@ export class ContextManager {
           progress.report({ message });
         });
 
+        // Initialize code structure manager
+        await this.codeStructureManager.initialize();
+
         // Analyze source code (40%)
         const files = await getFilesInWorkspace();
         for (const file of files) {
@@ -56,7 +62,7 @@ export class ContextManager {
       }
     );
 
-    // Initialize file watcher
+    // Initialize file watcher for both embedding and code structure
     this.initFileWatcher(this.context);
 
     // Example query
@@ -66,9 +72,18 @@ export class ContextManager {
 
   private initFileWatcher(context: vscode.ExtensionContext): void {
     context.subscriptions.push(this.watcher);
-    this.watcher.onDidChange(async (uri) => await this.updateFile(uri.fsPath));
-    this.watcher.onDidCreate(async (uri) => await this.addFile(uri.fsPath));
-    this.watcher.onDidDelete(async (uri) => await this.removeFile(uri.fsPath));
+    this.watcher.onDidChange(async (uri) => {
+      await this.updateFile(uri.fsPath);
+      this.codeStructureManager.invalidateCache();
+    });
+    this.watcher.onDidCreate(async (uri) => {
+      await this.addFile(uri.fsPath);
+      this.codeStructureManager.invalidateCache();
+    });
+    this.watcher.onDidDelete(async (uri) => {
+      await this.removeFile(uri.fsPath);
+      this.codeStructureManager.invalidateCache();
+    });
   }
 
   public async addFile(filePath: string): Promise<void> {
@@ -101,6 +116,33 @@ export class ContextManager {
     const selection = editor.selection;
 
     return { document, selection };
+  }
+
+  /**
+   * Get the code structure of the current workspace folder.
+   * Delegates to CodeStructureManager.
+   *
+   * @param isFlatten - Whether to return a flattened array of files or nested structure
+   * @returns Promise resolving to the directory structure or undefined if no workspace
+   */
+  public async getCodeStructure(isFlatten: boolean = false): Promise<any> {
+    return this.codeStructureManager.getCodeStructure(isFlatten);
+  }
+
+  /**
+   * Manually refresh the cached code structure.
+   * Delegates to CodeStructureManager.
+   */
+  public async refreshCodeStructure(): Promise<void> {
+    return this.codeStructureManager.refreshCodeStructure();
+  }
+
+  /**
+   * Clear the code structure cache.
+   * Delegates to CodeStructureManager.
+   */
+  public clearCodeStructureCache(): void {
+    this.codeStructureManager.clearCodeStructureCache();
   }
 
   public getFileContent(filePath: string): string {

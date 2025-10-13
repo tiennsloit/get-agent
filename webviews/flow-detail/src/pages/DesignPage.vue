@@ -143,7 +143,6 @@ const handleUserMessage = (message: string) => {
 
 const mockLogs = () => {
   try {
-
     // Mock streaming logs and thoughts
     let logIndex = 0;
     const mockLogs = [

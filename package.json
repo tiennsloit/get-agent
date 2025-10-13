@@ -73,6 +73,21 @@
           "type": "string",
           "default": "https://api.openai.com/v1",
           "description": "Base URL for the AI provider API"
+        },
+        "gonext.api.baseUrl": {
+          "type": "string",
+          "default": "https://gonext.hien.one/api",
+          "description": "Base URL for GoNext API requests"
+        },
+        "gonext.api.timeout": {
+          "type": "number",
+          "default": 30000,
+          "description": "Default request timeout in milliseconds"
+        },
+        "gonext.api.retryLimit": {
+          "type": "number",
+          "default": 2,
+          "description": "Maximum number of retry attempts for failed requests"
         }
       }
     },

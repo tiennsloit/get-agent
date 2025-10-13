@@ -1,3 +1,19 @@
+/**
+ * Project file structure for API requests
+ */
+export interface ProjectFile {
+  path: string;
+  language: string;
+}
+
+/**
+ * Request to analyze user request for flow generation
+ */
+export interface FlowAnalyzeRequest {
+  userRequest: string;
+  projectStructure: ProjectFile[];
+}
+
 export interface RelatedFile {
   name: string;
   path: string;

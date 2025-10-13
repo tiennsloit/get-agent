@@ -1,7 +1,3 @@
-/**
- * Flow service for managing flow data and API integration
- */
-
 import type {
   Flow,
   CreateFlowRequest,
@@ -13,8 +9,15 @@ import type {
   FlowBlueprintRequest,
   FlowBlueprintResponse,
   FlowSubtasksRequest,
-  FlowSubtasksResponse
+  FlowSubtasksResponse,
+  FlowAnalyzeRequest,
+  ProjectFile
 } from '../types/apiTypes';
+import type { FlowAnalysisResponse } from '../types/flowAnalysisTypes';
+import { ApiClient, ApiError } from './apiClient';
+import { injectable, inject } from 'inversify';
+import { INJECTION_KEYS } from '../core/constants/injectionKeys';
+import { ContextManager } from '../managers/context/contextManager';
 
 export interface IFlowService {
   // CRUD Operations
@@ -38,19 +41,26 @@ export interface IFlowService {
   generateSubtasks(request: FlowSubtasksRequest): Promise<FlowSubtasksResponse>;
 
   // User Request Analysis
-  analyzeUserRequest(userRequest: string): Promise<any>;
+  analyzeUserRequest(userRequest: string): Promise<FlowAnalysisResponse>;
   
   // Event Management
   onFlowUpdate(listener: (flowId?: string) => void): () => void;
 }
 
+@injectable()
 export class FlowService implements IFlowService {
   private flows: Map<string, Flow> = new Map();
   private updateListeners: ((flowId?: string) => void)[] = [];
+  private apiClient: ApiClient;
 
-  constructor() {
+  constructor(
+    @inject(INJECTION_KEYS.CONTEXT_MANAGER) private contextManager: ContextManager
+  ) {
     // Initialize with some mock data for testing
     this.initializeMockData();
+    
+    // Initialize API client
+    this.apiClient = new ApiClient();
   }
 
   /**
@@ -315,99 +325,58 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
   }
 
   /**
-   * Analyze user request and generate structured response
+   * Analyze user request and generate structured response using real API
    */
-  public async analyzeUserRequest(userRequest: string): Promise<any> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
+  public async analyzeUserRequest(userRequest: string): Promise<FlowAnalysisResponse> {
+    try {
+      // Validate input
+      if (!userRequest || userRequest.trim().length === 0) {
+        throw new Error('User request cannot be empty');
+      }
 
-    // Mock response
-    return {
-      "core_requirement": {
-        "summary": "Integrate DeepSeek API for AI-powered flow blueprint and subtask generation",
-        "main_objective": "Enable flow-detail webview to use DeepSeek's reasoning capabilities",
-        "type": "api_integration"
-      },
-      "technical_tasks": [
-        "Configure DeepSeek provider with API credentials",
-        "Extend RemoteAIClient to support DeepSeek endpoints",
-        "Create prompt templates for blueprint generation",
-        "Implement response parsing for DeepSeek format",
-        "Add error handling and fallback mechanisms",
-        "Update FlowApiService to route DeepSeek requests"
-      ],
-      "affected_modules": [
-        "flow-detail-webview",
-        "FlowApiService",
-        "GoNextService",
-        "AIClient",
-        "RemoteAIClient",
-        "ProService"
-      ],
-      "integration_points": [
-        {
-          "system": "DeepSeek API",
-          "endpoint": "/chat/completions",
-          "purpose": "Blueprint and subtask generation"
-        },
-        {
-          "system": "Flow Detail Webview",
-          "interface": "FlowApiService",
-          "purpose": "Display generated blueprints"
+      // Collect project structure using ContextManager
+      const codeStructure = await this.contextManager.getCodeStructure(true); // Get flattened structure
+      
+      // Convert to expected ProjectFile format
+      const projectStructure: ProjectFile[] = codeStructure?.map((file: any) => ({
+        path: file.path,
+        language: file.language
+      })) || [];
+
+      // Build API request payload
+      const requestPayload: FlowAnalyzeRequest = {
+        userRequest: userRequest.trim(),
+        projectStructure
+      };
+
+      // Call API
+      const response = await this.apiClient.post<FlowAnalysisResponse>(
+        '/flow/analyze',
+        requestPayload
+      );
+
+      return response;
+    } catch (error) {
+      // Handle API errors with user-friendly messages
+      if (error instanceof ApiError) {
+        if (error.statusCode === 400) {
+          throw new Error(`Invalid request: ${error.message}`);
+        } else if (error.statusCode && error.statusCode >= 500) {
+          throw new Error('Server error. Please try again later.');
+        } else if (error.message.includes('timeout')) {
+          throw new Error('Request timeout. Please check your connection and try again.');
+        } else {
+          throw new Error(`API error: ${error.message}`);
         }
-      ],
-      "search_keywords": [
-        "flow",
-        "blueprint",
-        "deepseek",
-        "AIClient",
-        "RemoteAIClient",
-        "FlowApiService",
-        "generateBlueprint",
-        "subtask",
-        "provider",
-        "completion"
-      ],
-      "exploration_targets": {
-        "files": [
-          "src/services/flowApiService.ts",
-          "src/services/goNextService.ts",
-          "src/services/aiClient.ts",
-          "src/services/remoteAIClient.ts",
-          "src/providers/flowDetailProvider.ts",
-          "config/providers.json",
-          "config/features.json"
-        ],
-        "directories": [
-          "src/services/",
-          "src/providers/",
-          "src/webviews/flow-detail/",
-          "config/"
-        ],
-        "patterns": [
-          "**/flow*.ts",
-          "**/*AIClient*.ts",
-          "**/provider*.json"
-        ]
-      },
-      "estimated_complexity": "medium",
-      "complexity_factors": {
-        "integration_complexity": "medium",
-        "testing_requirements": "high",
-        "refactoring_needed": "low",
-        "external_dependencies": "medium"
-      },
-      "prerequisites": [
-        "DeepSeek API key",
-        "Understanding of current flow generation logic",
-        "Knowledge of AIClient architecture"
-      ],
-      "risk_factors": [
-        "API rate limiting",
-        "Response format compatibility",
-        "Fallback mechanism complexity"
-      ]
-    };
+      }
+
+      // Re-throw other errors
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error('An unexpected error occurred during analysis');
+    }
   }
 
   /**

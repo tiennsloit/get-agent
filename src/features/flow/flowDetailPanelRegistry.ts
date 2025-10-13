@@ -1,8 +1,3 @@
-/**
- * Registry for managing flow detail panels and notifications
- */
-
-import * as vscode from 'vscode';
 import type { FlowDetailProvider } from './flowDetailProvider';
 
 export class FlowDetailPanelRegistry {
