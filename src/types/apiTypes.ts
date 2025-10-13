@@ -1,8 +1,9 @@
-/**
- * API types for Flow feature
- */
-
-import type { RelatedFile } from '../../../core/types/api/getRelatedFiles';
+export interface RelatedFile {
+  name: string;
+  path: string;
+  relationship: string;
+  confidence: number;
+}
 
 /**
  * Request to generate a blueprint for a flow

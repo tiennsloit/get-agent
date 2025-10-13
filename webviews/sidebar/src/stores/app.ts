@@ -1,4 +1,4 @@
-import { ChatScreen, ChatMode, type AppState } from '@/types/appState';
+import { Screen, type AppState } from '@/types/appState';
 import { defineStore } from 'pinia';
 
 export const useAppStore = defineStore('app', {
@@ -6,8 +6,7 @@ export const useAppStore = defineStore('app', {
         storage: sessionStorage,
     },
     state: (): AppState => ({
-        screen: ChatScreen.CHAT,
-        chatMode: ChatMode.NORMAL,
+        screen: Screen.FLOW,
     }),
     getters: {
     },

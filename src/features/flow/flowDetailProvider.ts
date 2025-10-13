@@ -9,7 +9,7 @@ import { FlowDetailPanelRegistry } from './flowDetailPanelRegistry';
 import { getWebviewContent } from '../../core/utilities/getWebviewContent';
 import { DiContainer } from '../../core/di-container';
 import { INJECTION_KEYS } from '../../core/constants/injectionKeys';
-import type { FlowAnalysisResponse } from './types/flowAnalysisTypes';
+import type { FlowAnalysisResponse } from '../../types/flowAnalysisTypes';
 
 export class FlowDetailProvider {
   private panel: vscode.WebviewPanel | undefined;
@@ -167,6 +167,15 @@ export class FlowDetailProvider {
   public show(): void {
     if (this.panel) {
       this.panel.reveal();
+    }
+  }
+
+  /**
+   * Update the panel title
+   */
+  public updateTitle(title: string): void {
+    if (this.panel) {
+      this.panel.title = title;
     }
   }
 

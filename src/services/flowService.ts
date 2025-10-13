@@ -7,14 +7,14 @@ import type {
   CreateFlowRequest,
   FlowListItem,
   FlowProgress
-} from '../features/flow/types/flowState';
-import { FlowState } from '../features/flow/types/flowState';
+} from '../types/flowState';
+import { FlowState } from '../types/flowState';
 import type {
   FlowBlueprintRequest,
   FlowBlueprintResponse,
   FlowSubtasksRequest,
   FlowSubtasksResponse
-} from '../features/flow/types/apiTypes';
+} from '../types/apiTypes';
 
 export interface IFlowService {
   // CRUD Operations

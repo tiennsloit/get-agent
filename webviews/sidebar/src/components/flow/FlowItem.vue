@@ -1,8 +1,8 @@
 <template>
   <div
-    class="p-2 flex items-center space-x-2 rounded-lg border border-gray-500/40 hover:bg-gray-500/5 cursor-pointer transition-all duration-200 group"
+    class="w-full overflow-hidden p-2 flex items-center space-x-2 rounded-lg border border-gray-500/40 hover:bg-gray-500/5 cursor-pointer transition-all duration-200 group"
     @click="handleClick">
-    <div class="h-8 w-8 rounded-full relative overflow-hidden">
+    <div class="h-8 w-8 grow-0 shrink-0 rounded-full relative">
       <div v-if="state === FlowState.TODO" class="absolute inset-0 rounded-full border-2 border-gray-500">
       </div>
       <div v-else-if="[FlowState.EXECUTING, FlowState.REPORTING, FlowState.DESIGNING].includes(state)"
@@ -24,39 +24,36 @@
         class="absolute inset-0 rounded-full border-2 border-gray-500/20 border-t-white/70 flex items-center justify-center animate-spin">
       </div>
     </div>
-    <div class="flex-1 flex flex-col space-y-1.5">
+    <div class="grow overflow-hidden flex flex-col space-y-1.5">
       <!-- Header -->
-      <div class="flex items-start justify-between">
-        <h4 class="font-medium truncate flex-1 mr-2">
+      <div class="flex overflow-hidden w-full items-center justify-between">
+        <div class="font-medium truncate grow mr-2">
           {{ truncatedTitle }}
-        </h4>
-        <span class="text-xs flex-shrink-0">
+        </div>
+        <div class="text-xs grow-0 text-nowrap">
           {{ formatTime(flow.lastUpdated) }}
-        </span>
+        </div>
       </div>
 
       <!-- Progress -->
-      <div class="flex space-x-4 h-5">
-        <small class="flex-1 text-xs flex-shrink-0">
+      <div class="w-full flex overflow-hidden space-x-4 h-5">
+        <small class="grow text-xs">
           {{ getStateLabel(state) }}
         </small>
-        <div class="w-24 flex space-x-2 items-center group-hover:hidden">
-          <div class="w-full flex-1 bg-gray-700 rounded-full h-1">
-            <div class="h-1 rounded-full transition-all duration-300 bg-white/70"
+        <div class="w-20 flex space-x-2 items-center group-hover:hidden">
+          <div class="grow flex bg-gray-700 rounded-full h-1">
+            <div class="h-1 grow rounded-full transition-all duration-300 bg-white/70"
               :style="{ width: `${progressPercentage}%` }"></div>
           </div>
           <small>{{ flow.progress.done }}/{{ flow.progress.total }}</small>
         </div>
-        <!-- Hover action buttons -->
-        <div class="w-24 hidden group-hover:flex space-x-1 items-center justify-end">
+        <div class="w-20 hidden group-hover:flex space-x-1 items-center justify-end">
           <button @click.stop="handleRename"
-            class="p-1 hover:bg-gray-600/50 rounded transition-colors flex items-center justify-center"
-            v-tooltip="'Rename'">
+            class="p-1 hover:bg-gray-600/50 rounded transition-colors flex items-center justify-center">
             <EditIcon class="text-sm" />
           </button>
           <button @click.stop="handleDelete"
-            class="p-1 hover:bg-red-600/50 rounded transition-colors flex items-center justify-center"
-            v-tooltip="'Delete'">
+            class="p-1 hover:bg-red-600/50 rounded transition-colors flex items-center justify-center">
             <TrashIcon class="text-sm" />
           </button>
         </div>

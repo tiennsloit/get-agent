@@ -1,26 +1,6 @@
-/**
- * Flow API service for interacting with blueprint and subtasks APIs
- */
-
-import type { GoNextService } from '../../services';
-import type { 
-  FlowBlueprintRequest, 
-  FlowBlueprintResponse, 
-  FlowSubtasksRequest, 
-  FlowSubtasksResponse 
-} from './types/apiTypes';
-
-/**
- * Flow API service placeholder - to be implemented with actual API calls
- */
+import { FlowBlueprintRequest, FlowBlueprintResponse, FlowSubtasksRequest, FlowSubtasksResponse } from "../../types/apiTypes";
 
 export class FlowApiService {
-  private goNextService: GoNextService;
-
-  constructor(goNextService: GoNextService) {
-    this.goNextService = goNextService;
-  }
-
   /**
    * Generate a blueprint for a flow (placeholder implementation)
    */

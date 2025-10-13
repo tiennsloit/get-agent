@@ -2,9 +2,9 @@
  * Step converter for converting flow tasks to execution steps
  */
 
-import type { Task } from './types/flowState';
-import type { ExecutionStep } from './types/stepTypes';
-import { StepType } from './types/stepTypes';
+import type { Task } from '../../types/flowState';
+import type { ExecutionStep } from '../../types/stepTypes';
+import { StepType } from '../../types/stepTypes';
 import { generateId } from '../../core/utilities/generateId';
 
 export class StepConverter {

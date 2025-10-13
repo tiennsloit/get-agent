@@ -5,8 +5,8 @@ export function mockStream(ref: Ref<string>, text: string, interval: number = 10
   
   const intervalId = setInterval(() => {
     if (index < text.length) {
-      // Append a chunk of text (5 characters at a time for a natural streaming feel)
-      const chunkSize = Math.min(10, text.length - index);
+      // Append a chunk of text (50 characters at a time for a natural streaming feel)
+      const chunkSize = Math.min(50, text.length - index);
       ref.value += text.slice(index, index + chunkSize);
       index += chunkSize;
     } else {

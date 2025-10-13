@@ -78,7 +78,7 @@ import { OutputCommands } from '@/constants/commands';
 
 // Store
 const flowStore = useFlowStore();
-const { inProgressFlows, completedFlows, isLoading, todoFlows } = storeToRefs(flowStore);
+const { inProgressFlows, completedFlows, isLoading } = storeToRefs(flowStore);
 
 // Local state
 const searchQuery = ref('');
@@ -97,17 +97,10 @@ const handleFlowClick = (flow: FlowListItem) => {
 };
 
 const createNewFlow = async () => {
-  // Check if there are any TODO flows
-  if (todoFlows.value.length > 0) {
-    // Open the most recent TODO flow
-    const todoFlow = todoFlows.value[0];
-    handleFlowClick(todoFlow);
-  } else {
-    // No TODO flows exist, create a new flow
-    vscode.postMessage({
-      command: OutputCommands.CREATE_FLOW
-    });
-  }
+  // Always create a new flow - simplified behavior
+  vscode.postMessage({
+    command: OutputCommands.CREATE_FLOW
+  });
 };
 
 // Lifecycle

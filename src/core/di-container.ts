@@ -3,16 +3,10 @@ import { Container } from "inversify";
 import { CommandRegistry } from "./commandRegistry";
 import { INJECTION_KEYS } from "./constants/injectionKeys";
 import { ProviderFactory } from "./providerFactory";
-import { GoNextService } from "../services";
 import { SidebarProvider } from "../features/sidebar/sidebarProvider";
-import { CodeLensProvider } from "../features/codeLens/codeLensProvider";
-import { InlineSuggestionCodeLensProvider } from "../features/inlineSuggestion/inlineSuggestionCodeLensProvider";
 import { ContextManager } from "../managers/context/contextManager";
-import { CompletionProvider } from "../features/codeCompletion/completionProvider";
-import { QuickFixProvider } from "../features/quickFix/quickFixProvider";
 import { FlowExecutor } from "../features/flow/flowExecutor";
 import { FlowService } from "../services/flowService";
-import { AIClient } from "../services/aiClient";
 import { FlowStateManager } from "../features/flow/flowStateManager";
 
 export class DiContainer {
@@ -29,28 +23,11 @@ export class DiContainer {
     this._container
       .bind<vscode.ExtensionContext>(INJECTION_KEYS.CONTEXT)
       .toConstantValue(context);
+    
     // Bind providers
     this._container
       .bind<SidebarProvider>(INJECTION_KEYS.SIDEBAR_PROVIDER)
       .to(SidebarProvider)
-      .inSingletonScope();
-    this._container
-      .bind<CodeLensProvider>(INJECTION_KEYS.CODE_LENS_PROVIDER)
-      .to(CodeLensProvider)
-      .inSingletonScope();
-    this._container
-      .bind<CompletionProvider>(INJECTION_KEYS.COMPLETION_PROVIDER)
-      .to(CompletionProvider)
-      .inSingletonScope();
-    this._container
-      .bind<InlineSuggestionCodeLensProvider>(
-        INJECTION_KEYS.INLINE_SUGGESTION_CODE_LENS_PROVIDER
-      )
-      .to(InlineSuggestionCodeLensProvider)
-      .inSingletonScope();
-    this._container
-      .bind<QuickFixProvider>(INJECTION_KEYS.QUICK_FIX_PROVIDER)
-      .to(QuickFixProvider)
       .inSingletonScope();
 
     // Bind services and other dependencies.
@@ -65,14 +42,6 @@ export class DiContainer {
     this._container
       .bind<ContextManager>(INJECTION_KEYS.CONTEXT_MANAGER)
       .to(ContextManager)
-      .inSingletonScope();
-    this._container
-      .bind<GoNextService>(INJECTION_KEYS.GONEXT_SERVICE)
-      .to(GoNextService)
-      .inSingletonScope();
-    this._container
-      .bind<AIClient>(INJECTION_KEYS.AI_CLIENT)
-      .to(AIClient)
       .inSingletonScope();
 
     // Bind Flow services

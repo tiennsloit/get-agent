@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { configState } from '../state/configState';
 
 interface Embedding {
     embedding: any;
@@ -43,15 +42,10 @@ export class EmbeddingManager {
 
     public async initialize(report: (params: { message: string, increment?: number }) => void): Promise<void> {
         try {
-            report({ message: "Initializing embedder..." });
-            const embeddingModel = configState.embeddingModel;
-            const modelPath = path.join(this.extensionContext.globalStorageUri.fsPath, 'embedding', embeddingModel!.fileName);
-            const { getLlama } = await import('node-llama-cpp');
-            const llama = await getLlama();
-            this.model = await llama.loadModel({ modelPath });
-            this.context = await this.model.createEmbeddingContext();
-
-            report({ message: "Embedder initialized", increment: 100 });
+            report({ message: "Embedding feature is disabled (state management removed)" });
+            // State management has been removed - embedding feature disabled
+            // This method is kept for compatibility but does nothing
+            report({ message: "Embedder initialization skipped", increment: 100 });
         } catch (error) {
             throw new Error(`Failed to initialize embedder: ${error instanceof Error ? error.message : String(error)}`);
         }

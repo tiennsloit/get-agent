@@ -23,12 +23,12 @@
       {
         "id": "gonext-intro",
         "title": "Introduction to GoNext",
-        "description": "Let's get started with GoNext - Your next AI-powered coding assistant!",
+        "description": "Let's get started with GoNext - Your AI-powered Flow Management Assistant!",
         "steps": [
           {
             "id": "welcome",
             "title": "Welcome",
-            "description": "Welcome to GoNext! Your AI-powered coding assistant for VSCode.",
+            "description": "Welcome to GoNext! Your AI-powered Flow Management assistant for VSCode.",
             "media": {
               "markdown": "assets/walkthrough/welcome.md"
             }
@@ -46,33 +46,9 @@
             ]
           },
           {
-            "id": "autocomplete",
-            "title": "Smart Autocomplete",
-            "description": "Just start typing – the AI suggests code in real-time!",
-            "media": {
-              "markdown": "assets/walkthrough/welcome.md"
-            }
-          },
-          {
-            "id": "chat-assistant",
-            "title": "AI Chat Assistant",
-            "description": "Ask questions about code and get instant answers from the AI chat assistant.",
-            "media": {
-              "markdown": "assets/walkthrough/welcome.md"
-            }
-          },
-          {
-            "id": "codelens",
-            "title": "AI CodeLens",
-            "description": "See AI-generated insights in your editor.",
-            "media": {
-              "markdown": "assets/walkthrough/welcome.md"
-            }
-          },
-          {
-            "id": "other-features",
-            "title": "More AI Magics",
-            "description": "Explore more other AI features...",
+            "id": "flow-management",
+            "title": "Flow Management",
+            "description": "Use GoNext to create and execute complex development workflows.",
             "media": {
               "markdown": "assets/walkthrough/welcome.md"
             }
@@ -82,18 +58,25 @@
     ],
     "configuration": {
       "title": "GoNext Settings",
-      "properties": {}
+      "properties": {
+        "gonext.ai.provider": {
+          "type": "string",
+          "default": "openai",
+          "description": "AI provider identifier"
+        },
+        "gonext.ai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the AI provider"
+        },
+        "gonext.ai.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "Base URL for the AI provider API"
+        }
+      }
     },
     "commands": [
-      {
-        "command": "gonext.show-code-instruction-input",
-        "title": "GoNext: Show Instruction Popup"
-      },
-      {
-        "command": "gonext.generate-commit-message",
-        "title": "GoNext: Generate Commit Message",
-        "icon": "$(sparkle)"
-      },
       {
         "command": "gonext.show-settings",
         "title": "GoNext: Open Settings"
@@ -103,96 +86,17 @@
         "title": "GoNext: Open Sidebar"
       },
       {
-        "command": "gonext.sidebar.new-chat",
-        "title": "New Chat",
-        "icon": "$(plus)"
-      },
-      {
-        "command": "gonext.sidebar.reset",
-        "title": "Reset",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "gonext.sidebar.show-history",
-        "title": "Open History",
-        "icon": "$(history)"
-      },
-      {
-        "command": "gonext.sidebar.show-settings",
-        "title": "Settings",
-        "icon": "$(gear)"
-      },
-      {
         "command": "gonext.show-walkthrough",
         "title": "GoNext: Show Walkthrough"
       },
       {
         "command": "gonext.setup-environment",
         "title": "GoNext: Setup Environment"
-      },
-      {
-        "command": "gonext.context-menu.",
-        "title": "GoNext: Explain code"
-      },
-      {
-        "command": "gonext.context-menu.explain",
-        "title": "GoNext: Explain selected code"
-      },
-      {
-        "command": "gonext.context-menu.optimize",
-        "title": "GoNext: Optimize selected code"
       }
     ],
-    "keybindings": [
-      {
-        "command": "gonext.show-code-instruction-input",
-        "key": "ctrl+i",
-        "mac": "cmd+i",
-        "when": "editorTextFocus"
-      }
-    ],
+    "keybindings": [],
     "menus": {
-      "scm/title": [
-        {
-          "command": "gonext.generate-commit-message",
-          "group": "navigation",
-          "when": "scmProvider == git"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "gonext.sidebar.new-chat",
-          "when": "view == gonext.sidebar",
-          "group": "navigation"
-        },
-        {
-          "command": "gonext.sidebar.show-history",
-          "when": "view == gonext.sidebar",
-          "group": "navigation"
-        },
-        {
-          "command": "gonext.sidebar.reset",
-          "when": "view == gonext.sidebar",
-          "group": "navigation"
-        },
-        {
-          "command": "gonext.sidebar.show-settings",
-          "when": "view == gonext.sidebar",
-          "group": "navigation"
-        }
-      ],
-      "editor/context": [
-        {
-          "command": "gonext.context-menu.optimize",
-          "group": "gonext",
-          "when": "editorHasSelection"
-        },
-        {
-          "command": "gonext.context-menu.explain",
-          "group": "gonext",
-          "when": "editorHasSelection"
-        }
-      ]
+      "view/title": []
     },
     "viewsContainers": {
       "activitybar": [
@@ -207,7 +111,7 @@
       "gonext-sidebar": [
         {
           "id": "gonext.sidebar",
-          "name": "Chat",
+          "name": "Flow Management",
           "type": "webview",
           "icon": "assets/icon.svg",
           "visibility": "visible"
@@ -243,15 +147,10 @@
     "ignore": "^7.0.3",
     "inversify": "^7.5.1",
     "js-yaml": "^4.1.0",
-    "lexrank.js": "^3.0.0",
     "lodash": "^4.17.21",
-    "natural": "^8.1.0",
-    "node-llama-cpp": "^3.11.0",
     "openai": "^5.3.0",
     "uuid": "^11.1.0",
     "web-tree-sitter": "^0.25.3"
   },
-  "extensionDependencies": [
-    "vscode.git"
-  ]
+  "extensionDependencies": []
 }
