@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 
 export const useFlowStore = defineStore('flow', {
   state: () => ({
-    currentStep: 1, // 1: Design, 2: Execute, 3: Report
+    currentStep: 1,
   }),
   
   actions: {

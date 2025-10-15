@@ -26,12 +26,12 @@ Return a JSON object with the following structure:
     "directories": ["string"],
     "patterns": ["string"]
   },
-  "estimated_complexity": "string",
+  "estimated_complexity": "Very easy" | "Easy" | "Medium" | "Hard" | "Very hard",
   "complexity_factors": {
-    "integration_complexity": "string",
-    "testing_requirements": "string",
-    "refactoring_needed": "string",
-    "external_dependencies": "string"
+    "integration_complexity": "Very easy" | "Easy" | "Medium" | "Hard" | "Very hard",
+    "testing_requirements": "Very easy" | "Easy" | "Medium" | "Hard" | "Very hard",
+    "refactoring_needed": "Very easy" | "Easy" | "Medium" | "Hard" | "Very hard",
+    "external_dependencies": "Very easy" | "Easy" | "Medium" | "Hard" | "Very hard"
   },
   "prerequisites": ["string"],
   "risk_factors": ["string"]

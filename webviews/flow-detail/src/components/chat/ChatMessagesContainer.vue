@@ -11,7 +11,8 @@
       <div v-for="(message, index) in messages" :key="'design-chat-message-' + index">
         <UserMessage v-if="message.role === 'user'" :message="message.content" />
         <template v-else>
-          <LogStep v-if="message.type === 'log'">{{ message.content }}</LogStep>
+          <LoadingMessage v-if="message.type === 'loading'" />
+          <LogStep v-else-if="message.type === 'log'">{{ message.content }}</LogStep>
           <ThoughtStep v-else-if="message.type === 'thought'">{{ message.content }}</ThoughtStep>
           <AnalysisResult v-else :analysis="message.content" />
         </template>
@@ -25,11 +26,12 @@ import UserMessage from '@/components/UserMessage.vue';
 import LogStep from "@/components/agentStep/LogStep.vue";
 import ThoughtStep from "@/components/agentStep/ThoughtStep.vue";
 import AnalysisResult from './AnalysisResult.vue';
+import LoadingMessage from './LoadingMessage.vue';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string | any;
-  type?: 'analysis' | 'log' | 'thought';
+  type?: 'analysis' | 'log' | 'thought' | 'loading';
 }
 
 defineProps<{

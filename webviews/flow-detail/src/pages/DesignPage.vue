@@ -5,7 +5,6 @@
       <ChatInput 
         :is-analyzing="isAnalyzing" 
         @send="handleUserMessage"
-        @keydown="handleKeyDown"
       />
     </div>
     <div class="p-6 flex-2/3 h-full overflow-y-auto rounded-2xl border border-gray-500/30 overflow-auto"
@@ -53,32 +52,32 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, computed } from 'vue';
 import CodeBlock from "@/components/CodeBlock.vue";
 import { CustomAttrs, VueMarkdown } from "@crazydos/vue-markdown";
 import rehypeRaw from 'rehype-raw';
-import designDocument from './sample-blueprint.txt?raw';
 import EditSolidIcon from "@/components/icons/EditSolidIcon.vue";
 import PlaySolidIcon from "@/components/icons/PlaySolidIcon.vue";
 import SaveSolidIcon from '@/components/icons/SaveSolidIcon.vue';
 import CloseSolidIcon from '@/components/icons/CloseSolidIcon.vue';
-import { mockStream } from '@/utilities/mockStream';
-import { vscode } from '@/utilities/vscode';
-
-// Import new components
 import ChatMessagesContainer from '@/components/chat/ChatMessagesContainer.vue';
 import ChatInput from '@/components/chat/ChatInput.vue';
+import { useDesignStore } from '@/stores/designStore';
 
-// Message types
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string | any;
-  type?: 'analysis' | 'log' | 'thought';
-}
+const designStore = useDesignStore();
 
-const isEditing = ref(false);
-const editableContent = ref(designDocument);
-const blueprint = ref('');
+// Computed properties from store
+const messages = computed(() => designStore.messages);
+const isAnalyzing = computed(() => designStore.isAnalyzing);
+const blueprint = computed(() => designStore.blueprint);
+const isEditing = computed(() => designStore.isEditing);
+
+// Use v-model for editable content
+const editableContent = computed({
+  get: () => designStore.editableContent,
+  set: (value: string) => designStore.updateEditableContent(value)
+});
+
 const customAttrs: CustomAttrs = {
   // use html tag name as key
   h1: { class: ['text-xl', 'font-bold mb-4'] },
@@ -90,121 +89,27 @@ const customAttrs: CustomAttrs = {
   hr: { class: ['my-4 opacity-50'] }
 }
 
-// Chat state
-const messages = ref<ChatMessage[]>([]);
-const isAnalyzing = ref(false);
-
 onMounted(() => {
-  mockStream(blueprint, designDocument);
+  designStore.initialize();
 })
 
+onUnmounted(() => {
+  designStore.cleanup();
+});
+
 const startEditing = () => {
-  isEditing.value = true;
+  designStore.startEditing();
 };
 
 const cancelEditing = () => {
-  isEditing.value = false;
-  editableContent.value = designDocument; // Reset to original content
+  designStore.cancelEditing();
 };
 
 const saveChanges = () => {
-  // In a real implementation, you would save the content here
-  // For now, we'll just exit edit mode
-  isEditing.value = false;
-  // TODO: Implement actual save functionality
-};
-
-// Chat functionality
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    // The actual sending is handled by the ChatInput component
-  }
+  designStore.saveChanges();
 };
 
 const handleUserMessage = (message: string) => {
-  if (!message || isAnalyzing.value) return;
-
-  // Add user message to chat
-  messages.value.push({ role: 'user', content: message });
-
-  // Show loading indicator
-  isAnalyzing.value = true;
-
-  // Send message to extension
-  vscode.postMessage({
-    command: 'analyzeUserRequest',
-    data: {
-      flowId: 'flow-123',
-      userRequest: message
-    }
-  });
+  designStore.sendUserMessage(message);
 };
-
-const mockLogs = () => {
-  try {
-    // Mock streaming logs and thoughts
-    let logIndex = 0;
-    const mockLogs = [
-      "Analyzing flow structure...",
-      "Identifying core components...",
-      "Evaluating integration points...",
-      "Assessing complexity factors..."
-    ];
-
-    const mockThoughts = [
-      "Let me break down this request into manageable parts.",
-      "I should consider the existing architecture patterns.",
-      "This might require changes to the data flow logic.",
-      "I'll need to verify the implementation approach."
-    ];
-
-    const logInterval = setInterval(() => {
-      if (logIndex < mockLogs.length) {
-        messages.value.push({
-          role: 'assistant',
-          type: 'log',
-          content: mockLogs[logIndex]
-        });
-        logIndex++;
-      } else {
-        clearInterval(logInterval);
-      }
-    }, 1000);
-
-    let thoughtIndex = 0;
-    const thoughtInterval = setInterval(() => {
-      if (thoughtIndex < mockThoughts.length) {
-        messages.value.push({
-          role: 'assistant',
-          type: 'thought',
-          content: mockThoughts[thoughtIndex]
-        });
-        thoughtIndex++;
-      } else {
-        clearInterval(thoughtInterval);
-      }
-    }, 1500);
-  } catch (e) {
-    console.log(e);
-  }
-};
-
-// Handle messages from extension
-window.addEventListener('message', event => {
-  const message = event.data;
-  switch (message.command) {
-    case 'analyzeUserResponse':
-      // Add analysis response
-      messages.value.push({
-        role: 'assistant',
-        type: 'analysis',
-        content: message.data.analysis
-      });
-
-      isAnalyzing.value = false;
-      mockLogs();
-      break;
-  }
-});
 </script>

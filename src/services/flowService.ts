@@ -351,7 +351,7 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
 
       // Call API
       const response = await this.apiClient.post<FlowAnalysisResponse>(
-        '/flow/analyze',
+        'flow/analyze',
         requestPayload
       );
 

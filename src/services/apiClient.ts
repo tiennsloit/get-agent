@@ -1,16 +1,5 @@
 import * as vscode from 'vscode';
 
-// Type definitions for options
-interface TimeoutOptions {
-  request?: number;
-}
-
-interface RetryConfig {
-  limit?: number;
-  methods?: string[];
-  statusCodes?: number[];
-}
-
 /**
  * Configuration options for API requests
  */
@@ -38,6 +27,36 @@ export interface RetryOptions {
 }
 
 /**
+ * Request context for interceptors
+ */
+export interface RequestContext {
+  /** HTTP method */
+  method: string;
+  /** Request URL (without base URL) */
+  url: string;
+  /** Request headers */
+  headers?: Record<string, string>;
+  /** Request body (for POST/PUT) */
+  body?: any;
+  /** Timestamp when request started */
+  timestamp: number;
+}
+
+/**
+ * Response context for interceptors
+ */
+export interface ResponseContext extends RequestContext {
+  /** Response status code */
+  statusCode?: number;
+  /** Duration in milliseconds */
+  duration: number;
+  /** Whether request succeeded */
+  success: boolean;
+  /** Error if request failed */
+  error?: Error;
+}
+
+/**
  * Structured error response from API client
  */
 export class ApiError extends Error {
@@ -61,6 +80,8 @@ export interface ApiClientConfig {
   timeout: number;
   /** Default retry limit */
   retryLimit: number;
+  /** Enable request logging */
+  enableLogging?: boolean;
 }
 
 /**
@@ -70,10 +91,18 @@ export class ApiClient {
   private client: any = null;
   private config: ApiClientConfig;
   private initPromise: Promise<void>;
+  private requestInterceptors: Array<(context: RequestContext) => void | Promise<void>> = [];
+  private responseInterceptors: Array<(context: ResponseContext) => void | Promise<void>> = [];
 
   constructor(config?: Partial<ApiClientConfig>) {
     this.config = this.loadConfiguration(config);
     this.initPromise = this.initializeClient();
+    
+    // Add default logging interceptor if enabled
+    if (this.config.enableLogging !== false) {
+      this.addRequestInterceptor(this.logRequest.bind(this));
+      this.addResponseInterceptor(this.logResponse.bind(this));
+    }
   }
 
   /**
@@ -118,19 +147,104 @@ export class ApiClient {
     return {
       baseUrl: override?.baseUrl || config.get<string>('baseUrl', 'https://gonext.hien.one/api'),
       timeout: override?.timeout || config.get<number>('timeout', 30000),
-      retryLimit: override?.retryLimit || config.get<number>('retryLimit', 2)
+      retryLimit: override?.retryLimit || config.get<number>('retryLimit', 2),
+      enableLogging: override?.enableLogging ?? config.get<boolean>('enableLogging', true)
     };
+  }
+
+  /**
+   * Add request interceptor
+   */
+  public addRequestInterceptor(interceptor: (context: RequestContext) => void | Promise<void>): void {
+    this.requestInterceptors.push(interceptor);
+  }
+
+  /**
+   * Add response interceptor
+   */
+  public addResponseInterceptor(interceptor: (context: ResponseContext) => void | Promise<void>): void {
+    this.responseInterceptors.push(interceptor);
+  }
+
+  /**
+   * Execute request interceptors
+   */
+  private async executeRequestInterceptors(context: RequestContext): Promise<void> {
+    for (const interceptor of this.requestInterceptors) {
+      await interceptor(context);
+    }
+  }
+
+  /**
+   * Execute response interceptors
+   */
+  private async executeResponseInterceptors(context: ResponseContext): Promise<void> {
+    for (const interceptor of this.responseInterceptors) {
+      await interceptor(context);
+    }
+  }
+
+  /**
+   * Default request logger
+   */
+  private logRequest(context: RequestContext): void {
+    console.log(`[API Request] ${context.method} ${this.config.baseUrl}/${context.url}`, {
+      timestamp: new Date(context.timestamp).toISOString(),
+      headers: context.headers,
+      body: context.body
+    });
+  }
+
+  /**
+   * Default response logger
+   */
+  private logResponse(context: ResponseContext): void {
+    const logLevel = context.success ? 'log' : 'error';
+    const status = context.success ? 'SUCCESS' : 'FAILED';
+    
+    console[logLevel](`[API Response] ${status} ${context.method} ${this.config.baseUrl}/${context.url}`, {
+      statusCode: context.statusCode,
+      duration: `${context.duration}ms`,
+      timestamp: new Date(context.timestamp).toISOString(),
+      error: context.error?.message
+    });
   }
 
   /**
    * Perform GET request
    */
   public async get<T>(url: string, options?: RequestOptions): Promise<T> {
+    const startTime = Date.now();
+    const requestContext: RequestContext = {
+      method: 'GET',
+      url,
+      headers: options?.headers,
+      timestamp: startTime
+    };
+
+    await this.executeRequestInterceptors(requestContext);
+
     try {
       const client = await this.ensureInitialized();
       const response = await client.get(url, this.buildOptions(options));
-      return JSON.parse(response.body) as T;
+      const result = JSON.parse(response.body) as T;
+
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: response.statusCode,
+        duration: Date.now() - startTime,
+        success: true
+      });
+
+      return result;
     } catch (error) {
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: (error as any)?.response?.statusCode,
+        duration: Date.now() - startTime,
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error))
+      });
       throw this.handleError(error);
     }
   }
@@ -139,14 +253,41 @@ export class ApiClient {
    * Perform POST request
    */
   public async post<T>(url: string, body: any, options?: RequestOptions): Promise<T> {
+    const startTime = Date.now();
+    const requestContext: RequestContext = {
+      method: 'POST',
+      url,
+      headers: options?.headers,
+      body,
+      timestamp: startTime
+    };
+
+    await this.executeRequestInterceptors(requestContext);
+
     try {
       const client = await this.ensureInitialized();
       const response = await client.post(url, {
         ...this.buildOptions(options),
         json: body
       });
-      return JSON.parse(response.body) as T;
+      const result = JSON.parse(response.body) as T;
+
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: response.statusCode,
+        duration: Date.now() - startTime,
+        success: true
+      });
+
+      return result;
     } catch (error) {
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: (error as any)?.response?.statusCode,
+        duration: Date.now() - startTime,
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error))
+      });
       throw this.handleError(error);
     }
   }
@@ -155,14 +296,41 @@ export class ApiClient {
    * Perform PUT request
    */
   public async put<T>(url: string, body: any, options?: RequestOptions): Promise<T> {
+    const startTime = Date.now();
+    const requestContext: RequestContext = {
+      method: 'PUT',
+      url,
+      headers: options?.headers,
+      body,
+      timestamp: startTime
+    };
+
+    await this.executeRequestInterceptors(requestContext);
+
     try {
       const client = await this.ensureInitialized();
       const response = await client.put(url, {
         ...this.buildOptions(options),
         json: body
       });
-      return JSON.parse(response.body) as T;
+      const result = JSON.parse(response.body) as T;
+
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: response.statusCode,
+        duration: Date.now() - startTime,
+        success: true
+      });
+
+      return result;
     } catch (error) {
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: (error as any)?.response?.statusCode,
+        duration: Date.now() - startTime,
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error))
+      });
       throw this.handleError(error);
     }
   }
@@ -171,11 +339,37 @@ export class ApiClient {
    * Perform DELETE request
    */
   public async delete<T>(url: string, options?: RequestOptions): Promise<T> {
+    const startTime = Date.now();
+    const requestContext: RequestContext = {
+      method: 'DELETE',
+      url,
+      headers: options?.headers,
+      timestamp: startTime
+    };
+
+    await this.executeRequestInterceptors(requestContext);
+
     try {
       const client = await this.ensureInitialized();
       const response = await client.delete(url, this.buildOptions(options));
-      return JSON.parse(response.body) as T;
+      const result = JSON.parse(response.body) as T;
+
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: response.statusCode,
+        duration: Date.now() - startTime,
+        success: true
+      });
+
+      return result;
     } catch (error) {
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: (error as any)?.response?.statusCode,
+        duration: Date.now() - startTime,
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error))
+      });
       throw this.handleError(error);
     }
   }

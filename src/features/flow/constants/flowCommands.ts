@@ -4,9 +4,6 @@
 
 export enum FlowInputCommands {
   FLOW_LIST_UPDATE = 'flow_list_update',
-  FLOW_STATE_CHANGE = 'flow_state_change',
-  FLOW_PROGRESS_UPDATE = 'flow_progress_update',
-  FLOW_BLUEPRINT_GENERATED = 'flow_blueprint_generated',
   FLOW_ERROR = 'flow_error'
 }
 
