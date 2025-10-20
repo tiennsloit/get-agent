@@ -26,7 +26,6 @@ import { ApiClient, ApiError } from './apiClient';
 import { injectable, inject } from 'inversify';
 import { INJECTION_KEYS } from '../core/constants/injectionKeys';
 import { ContextManager } from '../managers/context/contextManager';
-import { FlowActionExecutor } from '../features/flow/flowActionExecutor';
 
 export interface IFlowService {
   // CRUD Operations
@@ -61,9 +60,6 @@ export interface IFlowService {
     cumulativeKnowledge?: CumulativeKnowledge
   ): Promise<ExplorerResponse>;
   
-  // Action Execution
-  performAction(action: ActionType, parameters: any): Promise<ActionResult>;
-  
   // Event Management
   onFlowUpdate(listener: (flowId?: string) => void): () => void;
 }
@@ -73,7 +69,6 @@ export class FlowService implements IFlowService {
   private flows: Map<string, Flow> = new Map();
   private updateListeners: ((flowId?: string) => void)[] = [];
   private apiClient: ApiClient;
-  private actionExecutor: FlowActionExecutor;
 
   constructor(
     @inject(INJECTION_KEYS.CONTEXT_MANAGER) private contextManager: ContextManager
@@ -83,9 +78,6 @@ export class FlowService implements IFlowService {
     
     // Initialize API client
     this.apiClient = new ApiClient();
-    
-    // Initialize action executor
-    this.actionExecutor = new FlowActionExecutor();
   }
 
   /**
@@ -460,15 +452,6 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
       throw new Error('An unexpected error occurred during exploration');
     }
   }
-
-  /**
-   * Perform an action during code exploration
-   */
-  public async performAction(actionType: ActionType, parameters: any): Promise<ActionResult> {
-    return await this.actionExecutor.performAction(actionType, parameters);
-  }
-
-
 
   /**
    * Subscribe to flow updates

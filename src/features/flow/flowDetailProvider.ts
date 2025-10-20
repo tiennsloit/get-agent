@@ -10,11 +10,13 @@ import { getWebviewContent } from '../../core/utilities/getWebviewContent';
 import { DiContainer } from '../../core/di-container';
 import { INJECTION_KEYS } from '../../core/constants/injectionKeys';
 import type { FlowAnalysisResponse, ExplorerResponse, ActionResult, ExplorationHistory, CumulativeKnowledge } from '../../types/flowAnalysisTypes';
+import { ContextManager } from '../../managers/context/contextManager';
 
 export class FlowDetailProvider {
   private panel: vscode.WebviewPanel | undefined;
   private flowService: FlowService;
   private flowExecutor: FlowExecutor;
+  private contextManager: ContextManager;
   private flowId: string;
   private disposables: vscode.Disposable[] = [];
 
@@ -25,6 +27,7 @@ export class FlowDetailProvider {
     this.flowId = flowId;
     this.flowService = DiContainer.get<FlowService>(INJECTION_KEYS.FLOW_SERVICE);
     this.flowExecutor = DiContainer.get<FlowExecutor>(INJECTION_KEYS.FLOW_EXECUTOR);
+    this.contextManager = DiContainer.get<ContextManager>(INJECTION_KEYS.CONTEXT_MANAGER);
   }
 
   /**
@@ -126,19 +129,19 @@ export class FlowDetailProvider {
   private async handleAnalyzeUserRequest(data: { flowId: string; userRequest: string }): Promise<void> {
     try {
       const analysis: FlowAnalysisResponse = await this.flowService.analyzeUserRequest(data.userRequest);
-      
+
       this.panel?.webview.postMessage({
         command: 'analyzeUserResponse',
         data: { analysis }
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       this.panel?.webview.postMessage({
         command: 'analyzeUserResponse',
         data: { error: errorMessage }
       });
-      
+
       console.error('Error analyzing user request:', error);
     }
   }
@@ -146,8 +149,8 @@ export class FlowDetailProvider {
   /**
    * Handle code exploration request
    */
-  private async handleExploreCode(data: { 
-    flowId: string; 
+  private async handleExploreCode(data: {
+    flowId: string;
     implementationGoal: string;
     previousResponse?: ExplorerResponse;
     previousObservation?: string;
@@ -172,7 +175,7 @@ export class FlowDetailProvider {
         actualHistory, // Use the unified history
         data.cumulativeKnowledge
       );
-      
+
       console.log(`[FlowDetailProvider] Exploration iteration ${response.iteration} complete`, {
         understandingLevel: response.understanding_level,
         continueExploration: response.continue_exploration,
@@ -186,7 +189,7 @@ export class FlowDetailProvider {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[FlowDetailProvider] Exploration error:`, error);
-      
+
       this.panel?.webview.postMessage({
         command: 'explorationError',
         data: { error: errorMessage }
@@ -197,7 +200,7 @@ export class FlowDetailProvider {
   /**
    * Handle action execution request
    */
-  private async handlePerformAction(data: { 
+  private async handlePerformAction(data: {
     flowId: string;
     action: any;
     iteration: number;
@@ -208,11 +211,11 @@ export class FlowDetailProvider {
     });
 
     try {
-      const result: ActionResult = await this.flowService.performAction(
+      const result: ActionResult = await this.contextManager.performAction(
         data.action.type,
-        data.action.parameters
+        data.action.parameters,
       );
-      
+
       console.log(`[FlowDetailProvider] Action ${data.action.type} ${result.success ? 'succeeded' : 'failed'}`, {
         hasData: !!result.data,
         error: result.error
@@ -225,7 +228,7 @@ export class FlowDetailProvider {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[FlowDetailProvider] Action execution error:`, error);
-      
+
       // Send error as action result
       const errorResult: ActionResult = {
         actionType: data.action.type,
@@ -234,7 +237,7 @@ export class FlowDetailProvider {
         error: errorMessage,
         timestamp: new Date().toISOString()
       };
-      
+
       this.panel?.webview.postMessage({
         command: 'actionResult',
         data: { result: errorResult }
