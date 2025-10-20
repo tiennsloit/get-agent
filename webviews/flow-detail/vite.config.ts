@@ -26,7 +26,9 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
         '@ext': path.resolve(__dirname, '../..'),
+        '@shared': path.resolve(__dirname, '../../shared'),
       },
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.vue', '.json']
     },
     build: {
       outDir: "dist",

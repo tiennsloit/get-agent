@@ -66,7 +66,7 @@
 import { onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useFlowStore } from '@/stores/flowStore';
-import type { FlowListItem } from '@/types/flow';
+import type { FlowListItem } from '@shared/models/flow';
 import FlowItem from '@/components/flow/FlowItem.vue';
 import SearchIcon from '@/components/icons/SearchIcon.vue';
 import ActivityIcon from '@/components/icons/ActivityIcon.vue';
@@ -74,7 +74,7 @@ import HistoryIcon from '@/components/icons/HistoryIcon.vue';
 import FlowIcon from '@/components/icons/FlowIcon.vue';
 import PlusIcon from '@/components/icons/PlusIcon.vue';
 import { vscode } from '@/utilities/vscode';
-import { OutputCommands } from '@/constants/commands';
+import { WebviewOutputCommands } from '@shared/constants/commands';
 
 // Store
 const flowStore = useFlowStore();
@@ -91,7 +91,7 @@ const handleSearch = () => {
 const handleFlowClick = (flow: FlowListItem) => {
   // Send message to extension to open flow details page
   vscode.postMessage({
-    command: OutputCommands.OPEN_FLOW_DETAILS,
+    command: WebviewOutputCommands.OPEN_FLOW_DETAILS,
     data: { flowId: flow.id }
   });
 };
@@ -99,7 +99,7 @@ const handleFlowClick = (flow: FlowListItem) => {
 const createNewFlow = async () => {
   // Always create a new flow - simplified behavior
   vscode.postMessage({
-    command: OutputCommands.CREATE_FLOW
+    command: WebviewOutputCommands.CREATE_FLOW
   });
 };
 

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { COMMANDS } from './constants/commands';
+import { EXTENSION_COMMANDS } from '../../shared/constants/commands';
 
 export class CommandRegistry {
     private readonly _commands: Array<{ id: string, execute(...args: any[]): Promise<any> | unknown }>;
@@ -7,13 +7,13 @@ export class CommandRegistry {
         this._commands = [
             // Show sidebar panel
             {
-                id: COMMANDS.SHOW_SIDEBAR,
+                id: EXTENSION_COMMANDS.SHOW_SIDEBAR,
                 execute: () => vscode.commands.executeCommand("workbench.view.extension.gonext-sidebar"),
             },
 
             // Show walkthrough
             {
-                id: COMMANDS.SHOW_WALKTHROUGH,
+                id: EXTENSION_COMMANDS.SHOW_WALKTHROUGH,
                 execute: () => vscode.commands.executeCommand('workbench.action.openWalkthrough', 'gonext.gonext#gonext-intro'),
             },
         ];

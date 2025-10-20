@@ -1,4 +1,4 @@
-import { Message } from '../../models/message';
+import { Message } from '../../../shared/models/message';
 import { ExplorerRequestSchema, ExplorerResponseSchema } from '../../models/explorer';
 import { systemPrompt, assistantPrompt, codeExploreUserPrompt } from '../../prompts/flow/explorer';
 import { AIService } from '../../services/aiService';

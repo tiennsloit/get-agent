@@ -3,9 +3,9 @@
  */
 
 import * as vscode from 'vscode';
-import type { Task, ExecutionReport } from '../../types/flowState';
-import { FlowState } from '../../types/flowState';
-import type { ExecutionStep, StepExecutionResult, StepType } from '../../types/stepTypes';
+import type { Task, ExecutionReport } from '../../../shared/models/flow';
+import { FlowState } from '../../../shared/models/flow';
+import type { ExecutionStep, StepExecutionResult } from '../../../shared/models/step';
 import { FlowStateManager } from './flowStateManager';
 
 export class FlowExecutor {

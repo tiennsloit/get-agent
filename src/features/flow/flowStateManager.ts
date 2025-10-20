@@ -9,8 +9,8 @@ import type {
   Task, 
   ExecutionReport,
   FlowListItem 
-} from '../../types/flowState';
-import { FlowState } from '../../types/flowState';
+} from '../../../shared/models/flow';
+import { FlowState } from '../../../shared/models/flow';
 import { generateId } from '../../core/utilities/generateId';
 
 export class FlowStateManager {

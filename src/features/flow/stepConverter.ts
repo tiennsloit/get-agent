@@ -2,9 +2,9 @@
  * Step converter for converting flow tasks to execution steps
  */
 
-import type { Task } from '../../types/flowState';
-import type { ExecutionStep } from '../../types/stepTypes';
-import { StepType } from '../../types/stepTypes';
+import type { Task } from '../../../shared/models/flow';
+import type { ExecutionStep } from '../../../shared/models/step';
+import { StepType } from '../../../shared/models/step';
 import { generateId } from '../../core/utilities/generateId';
 
 export class StepConverter {
@@ -22,7 +22,10 @@ export class StepConverter {
       status: 'pending',
       data: {
         type: StepType.TEXT,
-        content: `${task.description}\n\nThis task will modify the following files:\n${task.files.map(f => `- ${f.action}: ${f.file}`).join('\n')}`
+        content: `${task.description}
+
+This task will modify the following files:
+${task.files.map(f => `- ${f.action}: ${f.file}`).join('\n')}`
       }
     });
     

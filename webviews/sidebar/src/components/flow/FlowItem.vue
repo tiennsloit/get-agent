@@ -64,11 +64,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { FlowState, type FlowListItem } from '@/types/flow';
+import { FlowState, type FlowListItem } from '@shared/models/flow';
 import { useConfirmation } from '@/composables/useConfirmation';
 import { useFlowStore } from '@/stores/flowStore';
 import { vscode } from '@/utilities/vscode';
-import { OutputCommands } from '@/constants/commands';
+import { WebviewOutputCommands } from '@shared/constants/commands';
 import CheckIcon2 from '../icons/CheckIcon2.vue';
 import CloseIcon from '../icons/CloseIcon.vue';
 import PauseIcon from '../icons/PauseIcon.vue';
@@ -113,7 +113,7 @@ const handleClick = () => {
 const handleRename = async () => {
   // Send rename event directly to extension - extension will handle showing prompt
   vscode.postMessage({
-    command: OutputCommands.RENAME_FLOW,
+    command: WebviewOutputCommands.RENAME_FLOW,
     data: {
       flowId: props.flow.id
     }

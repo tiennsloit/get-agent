@@ -1,5 +1,6 @@
 /**
- * Flow state definitions for the Flow feature
+ * Flow domain models
+ * Shared across extension, webviews, and serverless functions
  */
 
 /**
@@ -13,6 +14,14 @@ export enum FlowState {
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
   PAUSED = 'paused'
+}
+
+/**
+ * Progress tracking for flows
+ */
+export interface FlowProgress {
+  done: number;
+  total: number;
 }
 
 /**
@@ -33,14 +42,6 @@ export interface Task {
   files: TaskFile[];
   contextFiles: string[];
   status: 'pending' | 'in-progress' | 'completed' | 'failed';
-}
-
-/**
- * Progress tracking for flows
- */
-export interface FlowProgress {
-  done: number;
-  total: number;
 }
 
 /**
@@ -73,13 +74,6 @@ export interface Flow {
 }
 
 /**
- * Flow creation request
- */
-export interface CreateFlowRequest {
-  title: string;
-}
-
-/**
  * Flow list item for sidebar display
  */
 export interface FlowListItem {
@@ -89,3 +83,14 @@ export interface FlowListItem {
   progress: FlowProgress;
   lastUpdated: string;
 }
+
+/**
+ * Flow creation request
+ */
+export interface CreateFlowRequest {
+  title: string;
+  description?: string;
+  currentFilePath?: string;
+  currentFileContent?: string;
+}
+

@@ -1,5 +1,6 @@
 /**
  * Step execution types for Flow execution engine
+ * Used by the extension to execute flow tasks
  */
 
 /**

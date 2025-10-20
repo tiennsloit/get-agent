@@ -2,8 +2,8 @@ import * as vscode from "vscode";
 import { FlowService } from "../../services/flowService";
 import { FlowDetailProvider } from "../flow/flowDetailProvider";
 import { FlowDetailPanelRegistry } from "../flow/flowDetailPanelRegistry";
-import { SidebarOutputCommands, SidebarInputCommands } from "../../core/constants/sidebar";
-import type { CreateFlowRequest } from "../../types/flowState";
+import { WebviewOutputCommands, WebviewInputCommands } from "../../../shared/constants/commands";
+import type { CreateFlowRequest } from "../../../shared/models/flow";
 
 export interface SidebarMessageHandlerOptions {
   context: vscode.ExtensionContext;
@@ -36,27 +36,27 @@ export class SidebarMessageHandler {
 
     try {
       switch (command) {
-        case SidebarOutputCommands.GET_FLOWS:
+        case WebviewOutputCommands.GET_FLOWS:
           await this.handleGetFlows(webview);
           break;
 
-        case SidebarOutputCommands.CREATE_FLOW:
+        case WebviewOutputCommands.CREATE_FLOW:
           await this.handleCreateFlow(webview, data);
           break;
 
-        case SidebarOutputCommands.OPEN_FLOW_DETAILS:
+        case WebviewOutputCommands.OPEN_FLOW_DETAILS:
           await this.handleOpenFlowDetails(data);
           break;
 
-        case SidebarOutputCommands.SEARCH_FLOWS:
+        case WebviewOutputCommands.SEARCH_FLOWS:
           await this.handleSearchFlows(webview, data);
           break;
 
-        case SidebarOutputCommands.DELETE_FLOW:
+        case WebviewOutputCommands.DELETE_FLOW:
           await this.handleDeleteFlow(webview, data);
           break;
 
-        case SidebarOutputCommands.RENAME_FLOW:
+        case WebviewOutputCommands.RENAME_FLOW:
           await this.handleRenameFlow(webview, data);
           break;
 
@@ -75,7 +75,7 @@ export class SidebarMessageHandler {
   private async handleGetFlows(webview: vscode.Webview): Promise<void> {
     const flows = await this.flowService.getFlows();
     webview.postMessage({
-      command: SidebarInputCommands.FLOW_LIST_UPDATE,
+      command: WebviewInputCommands.FLOW_LIST_UPDATE,
       data: { flows }
     });
   }
@@ -97,7 +97,7 @@ export class SidebarMessageHandler {
 
       // Notify webview of the new flow
       webview.postMessage({
-        command: SidebarInputCommands.FLOW_LIST_UPDATE,
+        command: WebviewInputCommands.FLOW_LIST_UPDATE,
         data: {
           flows: await this.flowService.getFlows()
         }
@@ -118,7 +118,7 @@ export class SidebarMessageHandler {
   private async handleSearchFlows(webview: vscode.Webview, data: { query: string }): Promise<void> {
     const flows = await this.flowService.searchFlows(data.query);
     webview.postMessage({
-      command: SidebarInputCommands.FLOW_LIST_UPDATE,
+      command: WebviewInputCommands.FLOW_LIST_UPDATE,
       data: { flows }
     });
   }
@@ -132,7 +132,7 @@ export class SidebarMessageHandler {
     // Send updated flow list
     const flows = await this.flowService.getFlows();
     webview.postMessage({
-      command: SidebarInputCommands.FLOW_LIST_UPDATE,
+      command: WebviewInputCommands.FLOW_LIST_UPDATE,
       data: { flows }
     });
   }
@@ -178,7 +178,7 @@ export class SidebarMessageHandler {
       // Send updated flow list to webview
       const flows = await this.flowService.getFlows();
       webview.postMessage({
-        command: SidebarInputCommands.FLOW_LIST_UPDATE,
+        command: WebviewInputCommands.FLOW_LIST_UPDATE,
         data: { flows }
       });
 
@@ -244,7 +244,7 @@ export class SidebarMessageHandler {
    */
   private sendError(webview: vscode.Webview, error: string): void {
     webview.postMessage({
-      command: SidebarInputCommands.FLOW_ERROR,
+      command: WebviewInputCommands.FLOW_ERROR,
       data: { error }
     });
   }

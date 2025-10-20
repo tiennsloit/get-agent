@@ -1,4 +1,9 @@
 /**
+ * API contract models for backend communication
+ * Shared across extension and serverless functions
+ */
+
+/**
  * Project file structure for API requests
  */
 export interface ProjectFile {
@@ -7,18 +12,21 @@ export interface ProjectFile {
 }
 
 /**
- * Request to analyze user request for flow generation
+ * Related file metadata with relevance score
  */
-export interface FlowAnalyzeRequest {
-  userRequest: string;
-  projectStructure: ProjectFile[];
-}
-
 export interface RelatedFile {
   name: string;
   path: string;
   relationship: string;
   confidence: number;
+}
+
+/**
+ * Request to analyze user request for flow generation
+ */
+export interface FlowAnalyzeRequest {
+  userRequest: string;
+  projectStructure: ProjectFile[];
 }
 
 /**

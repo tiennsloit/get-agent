@@ -1,5 +1,5 @@
 import { FlowAnalysisRequestSchema, FlowAnalysisResponseSchema } from '../../models/analysis';
-import { Message } from '../../models/message';
+import { Message } from '../../../shared/models/message';
 import { systemPrompt, assistantPrompt, flowAnalyzeUserPrompt } from '../../prompts/flow/analyze';
 import { AIService } from '../../services/aiService';
 import { badRequest, internalError, methodNotAllowed, success } from '../../utils/response';

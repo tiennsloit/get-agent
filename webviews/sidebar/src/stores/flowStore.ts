@@ -3,9 +3,9 @@
  */
 
 import { defineStore } from 'pinia';
-import { type FlowListItem, type Flow, type CreateFlowRequest, FlowState as FlowItemState } from '@/types/flow';
+import { type FlowListItem, type Flow, type CreateFlowRequest, FlowState as FlowItemState } from '@shared/models/flow';
 import { vscode } from '@/utilities/vscode';
-import { OutputCommands } from '@/constants/commands';
+import { WebviewOutputCommands } from '@shared/constants/commands';
 
 interface FlowState {
   flows: FlowListItem[];
@@ -118,7 +118,7 @@ export const useFlowStore = defineStore('flow', {
       this.setLoading(true);
       try {
         vscode.postMessage({
-          command: OutputCommands.CREATE_FLOW,
+          command: WebviewOutputCommands.CREATE_FLOW,
           data: request
         });
         return null; // Will be handled by message response
@@ -137,7 +137,7 @@ export const useFlowStore = defineStore('flow', {
       this.setLoading(true);
       try {
         vscode.postMessage({
-          command: OutputCommands.DELETE_FLOW,
+          command: WebviewOutputCommands.DELETE_FLOW,
           data: { flowId }
         });
       } catch (error) {
@@ -154,7 +154,7 @@ export const useFlowStore = defineStore('flow', {
       this.setLoading(true);
       try {
         vscode.postMessage({
-          command: OutputCommands.SEARCH_FLOWS,
+          command: WebviewOutputCommands.SEARCH_FLOWS,
           data: { query }
         });
       } catch (error) {
@@ -171,7 +171,7 @@ export const useFlowStore = defineStore('flow', {
       this.setLoading(true);
       try {
         vscode.postMessage({
-          command: OutputCommands.GET_FLOWS
+          command: WebviewOutputCommands.GET_FLOWS
         });
       } catch (error) {
         console.error('Failed to refresh flows:', error);

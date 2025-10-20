@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { Message } from "../models/message";
+import { Message } from "../../shared/models/message";
 import { z } from "zod";
 
 const groq = new OpenAI({
@@ -11,7 +11,7 @@ export class AIService {
   static async completionWithSchema<T>(messages: Message[], schema?: z.ZodSchema<T>): Promise<T> {
     try {
       const response = await groq.chat.completions.create({
-        model: "moonshotai/kimi-k2-instruct",
+        model: "qwen/qwen3-32b",
         messages: messages.map(msg => ({
           role: msg.role as "system" | "user" | "assistant",
           content: msg.content

@@ -3,8 +3,8 @@ import type {
   CreateFlowRequest,
   FlowListItem,
   FlowProgress
-} from '../types/flowState';
-import { FlowState } from '../types/flowState';
+} from '../../shared/models/flow';
+import { FlowState } from '../../shared/models/flow';
 import type {
   FlowBlueprintRequest,
   FlowBlueprintResponse,
@@ -12,7 +12,7 @@ import type {
   FlowSubtasksResponse,
   FlowAnalyzeRequest,
   ProjectFile
-} from '../types/apiTypes';
+} from '../../shared/models/api';
 import type { FlowAnalysisResponse } from '../types/flowAnalysisTypes';
 import { ApiClient, ApiError } from './apiClient';
 import { injectable, inject } from 'inversify';
