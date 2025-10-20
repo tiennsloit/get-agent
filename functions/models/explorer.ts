@@ -40,12 +40,8 @@ const ExplorerResponseSchema = z.object({
 // ExplorerRequest schema
 const ExplorerRequestSchema = z.object({
     implementationGoal: z.string(),
-    projectStructure: z.array(z.object({
-        path: z.string(),
-        language: z.string(),
-    })),
-    previousJsonResponse: ExplorerResponseSchema.optional(),
-    previousObservation: z.string().optional()
+    previousJsonResponse: ExplorerResponseSchema.nullable().optional(),
+    previousObservation: z.string().nullable().optional()
 });
 
 // Type definitions

@@ -13,7 +13,17 @@
         <template v-else>
           <LoadingMessage v-if="message.type === 'loading'" />
           <LogStep v-else-if="message.type === 'log'">{{ message.content }}</LogStep>
-          <ThoughtStep v-else-if="message.type === 'thought'">{{ message.content }}</ThoughtStep>
+          <ThoughtStep v-else-if="message.type === 'thought'">
+            {{ message.content }}
+            <!-- Show progress after thought -->
+            <ExplorationProgress 
+              v-if="message.metadata?.explorerResponse"
+              :understanding-level="message.metadata.explorerResponse.understanding_level"
+              :confidence-score="message.metadata.explorerResponse.confidence_score"
+              :iteration="message.metadata.explorerResponse.iteration"
+              :next-priorities="message.metadata.explorerResponse.next_priorities"
+            />
+          </ThoughtStep>
           <AnalysisResult v-else :analysis="message.content" />
         </template>
       </div>
@@ -27,11 +37,13 @@ import LogStep from "@/components/agentStep/LogStep.vue";
 import ThoughtStep from "@/components/agentStep/ThoughtStep.vue";
 import AnalysisResult from './AnalysisResult.vue';
 import LoadingMessage from './LoadingMessage.vue';
+import ExplorationProgress from './ExplorationProgress.vue';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string | any;
-  type?: 'analysis' | 'log' | 'thought' | 'loading';
+  type?: 'analysis' | 'log' | 'thought' | 'loading' | 'action_result';
+  metadata?: any;
 }
 
 defineProps<{

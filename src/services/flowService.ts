@@ -11,13 +11,20 @@ import type {
   FlowSubtasksRequest,
   FlowSubtasksResponse,
   FlowAnalyzeRequest,
+  FlowExploreRequest,
   ProjectFile
 } from '../../shared/models/api';
-import type { FlowAnalysisResponse } from '../types/flowAnalysisTypes';
+import type { 
+  FlowAnalysisResponse, 
+  ExplorerResponse,
+  ActionType,
+  ActionResult
+} from '../types/flowAnalysisTypes';
 import { ApiClient, ApiError } from './apiClient';
 import { injectable, inject } from 'inversify';
 import { INJECTION_KEYS } from '../core/constants/injectionKeys';
 import { ContextManager } from '../managers/context/contextManager';
+import { FlowActionExecutor } from '../features/flow/flowActionExecutor';
 
 export interface IFlowService {
   // CRUD Operations
@@ -43,6 +50,16 @@ export interface IFlowService {
   // User Request Analysis
   analyzeUserRequest(userRequest: string): Promise<FlowAnalysisResponse>;
   
+  // Code Exploration
+  exploreCode(
+    implementationGoal: string,
+    previousResponse?: ExplorerResponse,
+    previousObservation?: string
+  ): Promise<ExplorerResponse>;
+  
+  // Action Execution
+  performAction(action: ActionType, parameters: any): Promise<ActionResult>;
+  
   // Event Management
   onFlowUpdate(listener: (flowId?: string) => void): () => void;
 }
@@ -52,6 +69,7 @@ export class FlowService implements IFlowService {
   private flows: Map<string, Flow> = new Map();
   private updateListeners: ((flowId?: string) => void)[] = [];
   private apiClient: ApiClient;
+  private actionExecutor: FlowActionExecutor;
 
   constructor(
     @inject(INJECTION_KEYS.CONTEXT_MANAGER) private contextManager: ContextManager
@@ -61,6 +79,9 @@ export class FlowService implements IFlowService {
     
     // Initialize API client
     this.apiClient = new ApiClient();
+    
+    // Initialize action executor
+    this.actionExecutor = new FlowActionExecutor();
   }
 
   /**
@@ -378,6 +399,66 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
       throw new Error('An unexpected error occurred during analysis');
     }
   }
+
+  /**
+   * Explore code iteratively based on implementation goal
+   */
+  public async exploreCode(
+    implementationGoal: string,
+    previousResponse?: ExplorerResponse,
+    previousObservation?: string
+  ): Promise<ExplorerResponse> {
+    try {
+      // Validate input
+      if (!implementationGoal || implementationGoal.trim().length === 0) {
+        throw new Error('Implementation goal cannot be empty');
+      }
+
+      // Build API request payload (no projectStructure needed)
+      const requestPayload: FlowExploreRequest = {
+        implementationGoal: implementationGoal.trim(),
+        previousJsonResponse: previousResponse,
+        previousObservation
+      };
+
+      // Call API
+      const response = await this.apiClient.post<ExplorerResponse>(
+        'flow/explorer',
+        requestPayload
+      );
+
+      return response;
+    } catch (error) {
+      // Handle API errors with user-friendly messages
+      if (error instanceof ApiError) {
+        if (error.statusCode === 400) {
+          throw new Error(`Invalid request: ${error.message}`);
+        } else if (error.statusCode && error.statusCode >= 500) {
+          throw new Error('Server error. Please try again later.');
+        } else if (error.message.includes('timeout')) {
+          throw new Error('Request timeout. Please check your connection and try again.');
+        } else {
+          throw new Error(`API error: ${error.message}`);
+        }
+      }
+
+      // Re-throw other errors
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error('An unexpected error occurred during exploration');
+    }
+  }
+
+  /**
+   * Perform an action during code exploration
+   */
+  public async performAction(actionType: ActionType, parameters: any): Promise<ActionResult> {
+    return await this.actionExecutor.performAction(actionType, parameters);
+  }
+
+
 
   /**
    * Subscribe to flow updates

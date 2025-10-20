@@ -4,7 +4,9 @@
       <ChatMessagesContainer :messages="messages" />
       <ChatInput 
         :is-analyzing="isAnalyzing" 
+        :is-exploring="isExploring"
         @send="handleUserMessage"
+        @stop="handleStopExploration"
       />
     </div>
     <div class="p-6 flex-2/3 h-full overflow-y-auto rounded-2xl border border-gray-500/30 overflow-auto"
@@ -69,6 +71,7 @@ const designStore = useDesignStore();
 // Computed properties from store
 const messages = computed(() => designStore.messages);
 const isAnalyzing = computed(() => designStore.isAnalyzing);
+const isExploring = computed(() => designStore.explorerContext.isExploring);
 const blueprint = computed(() => designStore.blueprint);
 const isEditing = computed(() => designStore.isEditing);
 
@@ -111,5 +114,9 @@ const saveChanges = () => {
 
 const handleUserMessage = (message: string) => {
   designStore.sendUserMessage(message);
+};
+
+const handleStopExploration = () => {
+  designStore.stopExploration();
 };
 </script>

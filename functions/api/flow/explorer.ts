@@ -18,12 +18,11 @@ export default async function handler(request: Request): Promise<Response> {
             return badRequest('Invalid request format: ' + parsedRequest.error.message);
         }
 
-        const { implementationGoal, projectStructure, previousJsonResponse, previousObservation } = parsedRequest.data;
+        const { implementationGoal, previousJsonResponse, previousObservation } = parsedRequest.data;
 
         // Fill user prompt
         const userPromptWithContent = codeExploreUserPrompt
             .replace('{{ implementation_goal }}', implementationGoal)
-            .replace('{{ project_structure }}', JSON.stringify(projectStructure, null, 2))
             .replace('{{ previous_json_response }}', previousJsonResponse ? JSON.stringify(previousJsonResponse, null, 2) : 'None')
             .replace('{{ previous_observation }}', JSON.stringify(previousObservation, null, 2) || 'None');
 

@@ -11,6 +11,7 @@ Available actions:
 - read_file: Read a specific file by providing its exact path
 - search_content: Search for specific text/pattern within files
 - read_terminal: Execute a terminal command and read output
+- list_directory: List all files and subdirectories in a given path (use this to explore project structure on-demand)
 
 Always respond in valid JSON format only.
 
@@ -94,14 +95,17 @@ const codeExploreUserPrompt = `### CONTEXT
 IMPLEMENTATION PLAN GOAL:
 {{ implementation_goal }}
 
-INITIAL PROJECT STRUCTURE:
-{{ project_structure }}
-
 PREVIOUS ITERATION (if applicable):
 {{ previous_json_response }}
 
 PREVIOUS ACTION OBSERVATION (if applicable):
 {{ previous_observation }}
+
+### GUIDANCE
+- Use 'list_directory' action to explore project structure as needed
+- Start with root directory (".") to understand high-level organization
+- Navigate incrementally to specific areas relevant to your implementation goal
+- Combine directory exploration with targeted file reading for efficient understanding
 
 ### REQUEST
 Analyze the codebase iteratively to build sufficient understanding for creating an implementation plan.

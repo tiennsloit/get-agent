@@ -30,6 +30,15 @@ export interface FlowAnalyzeRequest {
 }
 
 /**
+ * Request to explore code iteratively
+ */
+export interface FlowExploreRequest {
+  implementationGoal: string;
+  previousJsonResponse?: any;  // Previous ExplorerResponse
+  previousObservation?: string;
+}
+
+/**
  * Request to generate a blueprint for a flow
  */
 export interface FlowBlueprintRequest {

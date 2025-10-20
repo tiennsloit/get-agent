@@ -9,7 +9,7 @@ import { FlowDetailPanelRegistry } from './flowDetailPanelRegistry';
 import { getWebviewContent } from '../../core/utilities/getWebviewContent';
 import { DiContainer } from '../../core/di-container';
 import { INJECTION_KEYS } from '../../core/constants/injectionKeys';
-import type { FlowAnalysisResponse } from '../../types/flowAnalysisTypes';
+import type { FlowAnalysisResponse, ExplorerResponse, ActionResult } from '../../types/flowAnalysisTypes';
 
 export class FlowDetailProvider {
   private panel: vscode.WebviewPanel | undefined;
@@ -99,6 +99,18 @@ export class FlowDetailProvider {
             await this.handleAnalyzeUserRequest(message.data);
             break;
 
+          case 'exploreCode':
+            await this.handleExploreCode(message.data);
+            break;
+
+          case 'performAction':
+            await this.handlePerformAction(message.data);
+            break;
+
+          case 'stopExploration':
+            this.handleStopExploration(message.data);
+            break;
+
           default:
             console.warn('Unknown message command:', message.command);
         }
@@ -129,6 +141,105 @@ export class FlowDetailProvider {
       
       console.error('Error analyzing user request:', error);
     }
+  }
+
+  /**
+   * Handle code exploration request
+   */
+  private async handleExploreCode(data: { 
+    flowId: string; 
+    implementationGoal: string;
+    previousResponse?: ExplorerResponse;
+    previousObservation?: string;
+  }): Promise<void> {
+    console.log(`[FlowDetailProvider] Starting code exploration for flow ${data.flowId}`, {
+      iteration: data.previousResponse?.iteration ?? 0,
+      hasObservation: !!data.previousObservation
+    });
+
+    try {
+      const response: ExplorerResponse = await this.flowService.exploreCode(
+        data.implementationGoal,
+        data.previousResponse,
+        data.previousObservation
+      );
+      
+      console.log(`[FlowDetailProvider] Exploration iteration ${response.iteration} complete`, {
+        understandingLevel: response.understanding_level,
+        continueExploration: response.continue_exploration,
+        actionType: response.action.type
+      });
+
+      this.panel?.webview.postMessage({
+        command: 'explorerResponse',
+        data: { response }
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[FlowDetailProvider] Exploration error:`, error);
+      
+      this.panel?.webview.postMessage({
+        command: 'explorationError',
+        data: { error: errorMessage }
+      });
+    }
+  }
+
+  /**
+   * Handle action execution request
+   */
+  private async handlePerformAction(data: { 
+    flowId: string;
+    action: any;
+    iteration: number;
+  }): Promise<void> {
+    console.log(`[FlowDetailProvider] Executing action for iteration ${data.iteration}`, {
+      actionType: data.action.type,
+      parameters: data.action.parameters
+    });
+
+    try {
+      const result: ActionResult = await this.flowService.performAction(
+        data.action.type,
+        data.action.parameters
+      );
+      
+      console.log(`[FlowDetailProvider] Action ${data.action.type} ${result.success ? 'succeeded' : 'failed'}`, {
+        hasData: !!result.data,
+        error: result.error
+      });
+
+      this.panel?.webview.postMessage({
+        command: 'actionResult',
+        data: { result }
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[FlowDetailProvider] Action execution error:`, error);
+      
+      // Send error as action result
+      const errorResult: ActionResult = {
+        actionType: data.action.type,
+        success: false,
+        data: null,
+        error: errorMessage,
+        timestamp: new Date().toISOString()
+      };
+      
+      this.panel?.webview.postMessage({
+        command: 'actionResult',
+        data: { result: errorResult }
+      });
+    }
+  }
+
+  /**
+   * Handle stop exploration request
+   */
+  private handleStopExploration(data: { flowId: string }): void {
+    // For now, just acknowledge the stop request
+    // The actual loop control is handled in the webview
+    console.log(`Exploration stopped for flow ${data.flowId}`);
   }
 
   /**
