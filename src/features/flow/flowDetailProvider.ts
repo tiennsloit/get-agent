@@ -9,7 +9,7 @@ import { FlowDetailPanelRegistry } from './flowDetailPanelRegistry';
 import { getWebviewContent } from '../../core/utilities/getWebviewContent';
 import { DiContainer } from '../../core/di-container';
 import { INJECTION_KEYS } from '../../core/constants/injectionKeys';
-import type { FlowAnalysisResponse, ExplorerResponse, ActionResult } from '../../types/flowAnalysisTypes';
+import type { FlowAnalysisResponse, ExplorerResponse, ActionResult, ExplorationHistory, CumulativeKnowledge } from '../../types/flowAnalysisTypes';
 
 export class FlowDetailProvider {
   private panel: vscode.WebviewPanel | undefined;
@@ -151,17 +151,26 @@ export class FlowDetailProvider {
     implementationGoal: string;
     previousResponse?: ExplorerResponse;
     previousObservation?: string;
+    explorationHistory?: ExplorationHistory[];
+    history?: ExplorationHistory[]; // New field name
+    cumulativeKnowledge?: CumulativeKnowledge;
   }): Promise<void> {
+    // Support both 'explorationHistory' and 'history' field names
+    const actualHistory = data.history || data.explorationHistory;
+
     console.log(`[FlowDetailProvider] Starting code exploration for flow ${data.flowId}`, {
       iteration: data.previousResponse?.iteration ?? 0,
-      hasObservation: !!data.previousObservation
+      hasObservation: !!data.previousObservation,
+      historyLength: actualHistory?.length ?? 0
     });
 
     try {
       const response: ExplorerResponse = await this.flowService.exploreCode(
         data.implementationGoal,
         data.previousResponse,
-        data.previousObservation
+        data.previousObservation,
+        actualHistory, // Use the unified history
+        data.cumulativeKnowledge
       );
       
       console.log(`[FlowDetailProvider] Exploration iteration ${response.iteration} complete`, {

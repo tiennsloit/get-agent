@@ -18,7 +18,9 @@ import type {
   FlowAnalysisResponse, 
   ExplorerResponse,
   ActionType,
-  ActionResult
+  ActionResult,
+  ExplorationHistory,
+  CumulativeKnowledge
 } from '../types/flowAnalysisTypes';
 import { ApiClient, ApiError } from './apiClient';
 import { injectable, inject } from 'inversify';
@@ -54,7 +56,9 @@ export interface IFlowService {
   exploreCode(
     implementationGoal: string,
     previousResponse?: ExplorerResponse,
-    previousObservation?: string
+    previousObservation?: string,
+    explorationHistory?: ExplorationHistory[],
+    cumulativeKnowledge?: CumulativeKnowledge
   ): Promise<ExplorerResponse>;
   
   // Action Execution
@@ -406,7 +410,9 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
   public async exploreCode(
     implementationGoal: string,
     previousResponse?: ExplorerResponse,
-    previousObservation?: string
+    previousObservation?: string,
+    explorationHistory?: ExplorationHistory[],
+    cumulativeKnowledge?: CumulativeKnowledge
   ): Promise<ExplorerResponse> {
     try {
       // Validate input
@@ -414,9 +420,13 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
         throw new Error('Implementation goal cannot be empty');
       }
 
-      // Build API request payload (no projectStructure needed)
+      // Build API request payload with enhanced context
+      // Prefer new 'history' field over legacy 'explorationHistory'
       const requestPayload: FlowExploreRequest = {
         implementationGoal: implementationGoal.trim(),
+        history: explorationHistory, // New field name with observations embedded
+        cumulativeKnowledge,
+        // Legacy fields for backward compatibility
         previousJsonResponse: previousResponse,
         previousObservation
       };

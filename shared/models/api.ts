@@ -30,12 +30,48 @@ export interface FlowAnalyzeRequest {
 }
 
 /**
+ * Action summary for exploration history
+ */
+export interface ActionSummary {
+  type: string;
+  target: string;
+  success: boolean;
+}
+
+/**
+ * Exploration history entry
+ */
+export interface ExplorationHistory {
+  iteration: number;
+  understanding_level: number;
+  action_summary: ActionSummary;
+  key_findings: string[];
+  explored_files: string[];
+  explored_directories: string[];
+  observation?: Record<string, any> | string; // Enhanced: observation from action execution
+}
+
+/**
+ * Cumulative knowledge across iterations
+ */
+export interface CumulativeKnowledge {
+  confirmed: string[];
+  assumptions: string[];
+  unknowns: string[];
+  explored_files: string[];
+  explored_directories: string[];
+}
+
+/**
  * Request to explore code iteratively
  */
 export interface FlowExploreRequest {
   implementationGoal: string;
-  previousJsonResponse?: any;  // Previous ExplorerResponse
-  previousObservation?: string;
+  previousJsonResponse?: any;  // Previous ExplorerResponse (kept for backward compatibility)
+  previousObservation?: string; // Last observation (kept for backward compatibility)
+  explorationHistory?: ExplorationHistory[]; // Full history of all iterations (legacy field name)
+  history?: ExplorationHistory[]; // Full history of all iterations (new field name)
+  cumulativeKnowledge?: CumulativeKnowledge; // Aggregated knowledge across iterations
 }
 
 /**

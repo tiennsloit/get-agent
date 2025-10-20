@@ -102,30 +102,8 @@ export class FlowActionExecutor {
         throw new Error('Search query cannot be empty');
       }
 
-      // Generate mock search results
-      const mockResults = [
-        {
-          file: `src/services/${query.toLowerCase()}.ts`,
-          line: 42,
-          column: 10,
-          match: `export class ${query}Service implements I${query}Service {`,
-          context: `Implementation of ${query} service with core business logic`
-        },
-        {
-          file: `src/types/${query.toLowerCase()}Types.ts`,
-          line: 15,
-          column: 1,
-          match: `export interface ${query}Config {`,
-          context: `Type definitions for ${query} configuration`
-        },
-        {
-          file: `src/core/utilities/${query.toLowerCase()}Utils.ts`,
-          line: 8,
-          column: 1,
-          match: `export function process${query}(data: any): void {`,
-          context: `Utility functions for ${query} processing`
-        }
-      ];
+      // TODO: Using tree-sitter to find matches
+      const mockResults = [];
 
       return {
         actionType: 'search_content',
@@ -133,7 +111,7 @@ export class FlowActionExecutor {
         data: {
           query,
           scope,
-          results: mockResults,
+          results: [],
           totalMatches: mockResults.length
         },
         timestamp

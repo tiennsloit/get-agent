@@ -206,7 +206,7 @@ export class ApiClient {
       statusCode: context.statusCode,
       duration: `${context.duration}ms`,
       timestamp: new Date(context.timestamp).toISOString(),
-      error: context.error?.message
+      response: context.success ? context.body : context.error
     });
   }
 

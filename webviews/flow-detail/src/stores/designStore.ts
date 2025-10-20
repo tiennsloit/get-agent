@@ -4,7 +4,9 @@ import designDocument from '@/pages/sample-blueprint.txt?raw';
 import type {
     ExplorerResponse,
     ExplorerContext,
-    ActionResult
+    ActionResult,
+    ExplorationHistory,
+    CumulativeKnowledge
 } from '@/types/explorerTypes';
 
 export interface ChatMessage {
@@ -28,6 +30,11 @@ interface DesignState {
     // Explorer context
     explorerContext: ExplorerContext;
 
+    // Enhanced exploration state
+    explorationHistory: ExplorationHistory[];
+    cumulativeKnowledge: CumulativeKnowledge;
+    exploredTargets: Set<string>;
+
     // Message event handler
     messageHandler: ((event: MessageEvent) => void) | null;
 }
@@ -45,12 +52,59 @@ export const useDesignStore = defineStore('design', {
             previousResponse: null,
             implementationGoal: '',
             observations: [],
-            maxIterations: 30
+            maxIterations: 50
         },
+        explorationHistory: [],
+        cumulativeKnowledge: {
+            confirmed: [],
+            assumptions: [],
+            unknowns: [],
+            explored_files: [],
+            explored_directories: []
+        },
+        exploredTargets: new Set<string>(),
         messageHandler: null
     }),
 
     actions: {
+        /**
+         * Aggregate knowledge from current response into cumulative knowledge
+         */
+        aggregateKnowledge(response: ExplorerResponse) {
+            const currentKnowledge = response.current_knowledge;
+
+            // Merge confirmed facts (deduplicate)
+            const confirmedSet = new Set([...this.cumulativeKnowledge.confirmed, ...(currentKnowledge.confirmed || [])]);
+            this.cumulativeKnowledge.confirmed = Array.from(confirmedSet);
+
+            // Merge assumptions (deduplicate)
+            const assumptionsSet = new Set([...this.cumulativeKnowledge.assumptions, ...(currentKnowledge.assumptions || [])]);
+            this.cumulativeKnowledge.assumptions = Array.from(assumptionsSet);
+
+            // Update unknowns (replace with current)
+            this.cumulativeKnowledge.unknowns = [...(currentKnowledge.unknowns || [])];
+
+            // Merge explored files and directories from response if available
+            if (currentKnowledge.explored_files) {
+                const exploredFilesSet = new Set([...this.cumulativeKnowledge.explored_files, ...currentKnowledge.explored_files]);
+                this.cumulativeKnowledge.explored_files = Array.from(exploredFilesSet);
+            }
+
+            if (currentKnowledge.explored_directories) {
+                const exploredDirsSet = new Set([...this.cumulativeKnowledge.explored_directories, ...currentKnowledge.explored_directories]);
+                this.cumulativeKnowledge.explored_directories = Array.from(exploredDirsSet);
+            }
+        },
+
+        /**
+         * Extract key findings from response thinking
+         */
+        extractKeyFindings(response: ExplorerResponse): string[] {
+            // Simple extraction: split thinking into sentences and take first 3 meaningful ones
+            const sentences = response.thinking.split(/[.!?]\s+/).filter(s => s.trim().length > 20);
+            return sentences.slice(0, 3);
+        },
+
         /**
          * Initialize the store - load blueprint and set up message listener
          */
@@ -236,6 +290,17 @@ export const useDesignStore = defineStore('design', {
             this.explorerContext.previousResponse = null;
             this.explorerContext.observations = [];
 
+            // Reset enhanced exploration state
+            this.explorationHistory = [];
+            this.cumulativeKnowledge = {
+                confirmed: [],
+                assumptions: [],
+                unknowns: [],
+                explored_files: [],
+                explored_directories: []
+            };
+            this.exploredTargets = new Set<string>();
+
             // Start first iteration
             this.runExplorationIteration(flowId);
         },
@@ -262,16 +327,21 @@ export const useDesignStore = defineStore('design', {
             // Add loading message
             this.addLoadingMessage();
 
-            // Prepare previous observation
+            // Prepare previous observation for backward compatibility
             const previousObservation = this.explorerContext.observations.length > 0
                 ? this.explorerContext.observations[this.explorerContext.observations.length - 1]
                 : undefined;
 
-            // Send exploration request to extension
+            // Send exploration request to extension with new format
+            // Use 'history' field instead of 'explorationHistory' (while keeping legacy for now)
             try {
                 let clonedData = JSON.parse(JSON.stringify({
                     flowId,
                     implementationGoal: this.explorerContext.implementationGoal,
+                    // New format: use 'history' field with observations embedded
+                    history: this.explorationHistory,
+                    cumulativeKnowledge: this.cumulativeKnowledge,
+                    // Legacy fields for backward compatibility (can be removed in future)
                     previousResponse: this.explorerContext.previousResponse,
                     previousObservation
                 }));
@@ -295,6 +365,44 @@ export const useDesignStore = defineStore('design', {
             // Update iteration count
             this.explorerContext.currentIteration = response.iteration;
             this.explorerContext.previousResponse = response;
+
+            // Aggregate cumulative knowledge
+            this.aggregateKnowledge(response);
+
+            // Extract key findings
+            const keyFindings = this.extractKeyFindings(response);
+
+            // Track explored files and directories from action
+            const exploredFiles: string[] = [];
+            const exploredDirectories: string[] = [];
+
+            if (response.action.type === 'read_file' && response.action.parameters.path) {
+                exploredFiles.push(response.action.parameters.path);
+                this.exploredTargets.add(response.action.parameters.path);
+            } else if (response.action.type === 'list_directory' && response.action.parameters.path) {
+                exploredDirectories.push(response.action.parameters.path);
+                this.exploredTargets.add(response.action.parameters.path);
+            }
+
+            // Create action summary
+            const actionSummary = {
+                type: response.action.type,
+                target: response.action.parameters.path || response.action.parameters.query || response.action.parameters.command || 'unknown',
+                success: true // Will be updated when action result comes back
+            };
+
+            // Create history entry
+            const historyEntry: ExplorationHistory = {
+                iteration: response.iteration,
+                understanding_level: response.understanding_level,
+                action_summary: actionSummary,
+                key_findings: keyFindings,
+                explored_files: exploredFiles,
+                explored_directories: exploredDirectories
+            };
+
+            // Store in history (will be completed with actual success status after action execution)
+            this.explorationHistory.push(historyEntry);
 
             // Add thinking message with metadata
             this.addMessage({
@@ -348,7 +456,14 @@ export const useDesignStore = defineStore('design', {
          */
         handleActionResult(result: ActionResult, flowId: string = 'flow-123') {
             if (result.success) {
-                // Store observation
+                // Store observation in the last history entry
+                if (this.explorationHistory.length > 0) {
+                    const lastEntry = this.explorationHistory[this.explorationHistory.length - 1];
+                    lastEntry.observation = result.data; // Attach observation to history entry
+                    lastEntry.action_summary.success = true; // Update success status
+                }
+
+                // Also keep in observations array for backward compatibility
                 const observation = JSON.stringify(result.data, null, 2);
                 this.explorerContext.observations.push(observation);
 
@@ -359,7 +474,14 @@ export const useDesignStore = defineStore('design', {
                     content: `Action completed successfully: ${result.actionType}`
                 });
             } else {
-                // Store error as observation
+                // Store error as observation in history
+                if (this.explorationHistory.length > 0) {
+                    const lastEntry = this.explorationHistory[this.explorationHistory.length - 1];
+                    lastEntry.observation = { error: result.error };
+                    lastEntry.action_summary.success = false; // Update success status
+                }
+
+                // Store error as observation for backward compatibility
                 const errorObservation = `Error executing ${result.actionType}: ${result.error}`;
                 this.explorerContext.observations.push(errorObservation);
 
@@ -456,8 +578,17 @@ export const useDesignStore = defineStore('design', {
                 previousResponse: null,
                 implementationGoal: '',
                 observations: [],
-                maxIterations: 30
+                maxIterations: 50
             };
+            this.explorationHistory = [];
+            this.cumulativeKnowledge = {
+                confirmed: [],
+                assumptions: [],
+                unknowns: [],
+                explored_files: [],
+                explored_directories: []
+            };
+            this.exploredTargets = new Set<string>();
         }
     }
 });

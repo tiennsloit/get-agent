@@ -96,6 +96,40 @@ export interface CurrentKnowledge {
   confirmed_facts: string[];
   assumptions: string[];
   unknowns: string[];
+  explored_files?: string[];
+  explored_directories?: string[];
+}
+
+/**
+ * Action summary for exploration history
+ */
+export interface ActionSummary {
+  type: string;
+  target: string;
+  success: boolean;
+}
+
+/**
+ * Exploration history entry
+ */
+export interface ExplorationHistory {
+  iteration: number;
+  understanding_level: number;
+  action_summary: ActionSummary;
+  key_findings: string[];
+  explored_files: string[];
+  explored_directories: string[];
+}
+
+/**
+ * Cumulative knowledge across iterations
+ */
+export interface CumulativeKnowledge {
+  confirmed: string[];
+  assumptions: string[];
+  unknowns: string[];
+  explored_files: string[];
+  explored_directories: string[];
 }
 
 /**
