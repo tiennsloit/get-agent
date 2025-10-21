@@ -114,6 +114,10 @@ export class FlowDetailProvider {
             this.handleStopExploration(message.data);
             break;
 
+          case 'generateBlueprintFromExploration':
+            await this.handleGenerateBlueprintFromExploration(message.data);
+            break;
+
           default:
             console.warn('Unknown message command:', message.command);
         }
@@ -241,6 +245,100 @@ export class FlowDetailProvider {
       this.panel?.webview.postMessage({
         command: 'actionResult',
         data: { result: errorResult }
+      });
+    }
+  }
+
+  /**
+   * Handle blueprint generation from exploration results
+   */
+  private async handleGenerateBlueprintFromExploration(data: {
+    flowId: string;
+    implementationGoal: string;
+    explorationHistory: ExplorationHistory[];
+    cumulativeKnowledge: CumulativeKnowledge;
+    analysisContext?: FlowAnalysisResponse;
+  }): Promise<void> {
+    console.log(`[FlowDetailProvider] Generating blueprint from exploration for flow ${data.flowId}`, {
+      iterations: data.explorationHistory.length,
+      confirmedFacts: data.cumulativeKnowledge.confirmed.length
+    });
+
+    try {
+      const stream = await this.flowService.generateBlueprintFromExploration(
+        data.implementationGoal,
+        data.explorationHistory,
+        data.cumulativeKnowledge,
+        data.analysisContext
+      );
+
+      // Read the stream and forward chunks to webview
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            // Send completion signal
+            this.panel?.webview.postMessage({
+              command: 'blueprintComplete',
+              data: { success: true }
+            });
+            break;
+          }
+
+          // Decode chunk and parse SSE events
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('event: chunk')) {
+              // Next line should be data
+              const dataLineIndex = lines.indexOf(line) + 1;
+              if (dataLineIndex < lines.length) {
+                const dataLine = lines[dataLineIndex];
+                if (dataLine.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(dataLine.substring(6));
+                    this.panel?.webview.postMessage({
+                      command: 'blueprintChunk',
+                      data: { chunk: data.chunk }
+                    });
+                  } catch (e) {
+                    console.error('Failed to parse SSE data:', e);
+                  }
+                }
+              }
+            } else if (line.startsWith('event: error')) {
+              const dataLineIndex = lines.indexOf(line) + 1;
+              if (dataLineIndex < lines.length) {
+                const dataLine = lines[dataLineIndex];
+                if (dataLine.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(dataLine.substring(6));
+                    throw new Error(data.error);
+                  } catch (e) {
+                    console.error('Stream error:', e);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      console.log('[FlowDetailProvider] Blueprint generation complete');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[FlowDetailProvider] Blueprint generation error:', error);
+
+      this.panel?.webview.postMessage({
+        command: 'blueprintError',
+        data: { error: errorMessage }
       });
     }
   }

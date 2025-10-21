@@ -12,6 +12,8 @@ import type {
   FlowSubtasksResponse,
   FlowAnalyzeRequest,
   FlowExploreRequest,
+  FlowBlueprintFromExplorationRequest,
+  ExplorationSummary,
   ProjectFile
 } from '../../shared/models/api';
 import type { 
@@ -59,6 +61,14 @@ export interface IFlowService {
     explorationHistory?: ExplorationHistory[],
     cumulativeKnowledge?: CumulativeKnowledge
   ): Promise<ExplorerResponse>;
+  
+  // Blueprint Generation from Exploration
+  generateBlueprintFromExploration(
+    implementationGoal: string,
+    explorationHistory: ExplorationHistory[],
+    cumulativeKnowledge: CumulativeKnowledge,
+    analysisContext?: FlowAnalysisResponse
+  ): Promise<ReadableStream<Uint8Array>>;
   
   // Event Management
   onFlowUpdate(listener: (flowId?: string) => void): () => void;
@@ -450,6 +460,101 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
       }
 
       throw new Error('An unexpected error occurred during exploration');
+    }
+  }
+
+  /**
+   * Generate blueprint from exploration results
+   */
+  public async generateBlueprintFromExploration(
+    implementationGoal: string,
+    explorationHistory: ExplorationHistory[],
+    cumulativeKnowledge: CumulativeKnowledge,
+    analysisContext?: FlowAnalysisResponse
+  ): Promise<ReadableStream<Uint8Array>> {
+    try {
+      // Validate input
+      if (!implementationGoal || implementationGoal.trim().length === 0) {
+        throw new Error('Implementation goal cannot be empty');
+      }
+
+      if (!explorationHistory || explorationHistory.length === 0) {
+        throw new Error('Exploration history is required');
+      }
+
+      // Derive exploration summary from history
+      const lastEntry = explorationHistory[explorationHistory.length - 1];
+      
+      // Collect all unique files and directories
+      const allFiles = new Set<string>();
+      const allDirectories = new Set<string>();
+      
+      explorationHistory.forEach(entry => {
+        entry.explored_files.forEach(f => allFiles.add(f));
+        entry.explored_directories.forEach(d => allDirectories.add(d));
+      });
+
+      // Extract key findings from most recent iterations (last 5)
+      const recentIterations = explorationHistory.slice(-5);
+      const keyFindings: string[] = [];
+      recentIterations.forEach(entry => {
+        entry.key_findings.forEach(finding => {
+          if (!keyFindings.includes(finding) && keyFindings.length < 10) {
+            keyFindings.push(finding);
+          }
+        });
+      });
+
+      const explorationSummary: ExplorationSummary = {
+        totalIterations: explorationHistory.length,
+        finalUnderstandingLevel: lastEntry.understanding_level,
+        finalConfidenceScore: {
+          architecture: 0.8, // These would come from the last explorer response
+          data_flow: 0.7,
+          integration_points: 0.75,
+          implementation_details: 0.85
+        },
+        exploredFiles: Array.from(allFiles),
+        exploredDirectories: Array.from(allDirectories),
+        keyFindings
+      };
+
+      // Build API request payload
+      const requestPayload: FlowBlueprintFromExplorationRequest = {
+        implementationGoal: implementationGoal.trim(),
+        explorationSummary,
+        explorationHistory,
+        cumulativeKnowledge,
+        analysisContext
+      };
+
+      // Call API and return stream
+      const stream = await this.apiClient.postStream(
+        'flow/blueprint',
+        requestPayload
+      );
+
+      return stream;
+    } catch (error) {
+      // Handle API errors with user-friendly messages
+      if (error instanceof ApiError) {
+        if (error.statusCode === 400) {
+          throw new Error(`Invalid request: ${error.message}`);
+        } else if (error.statusCode && error.statusCode >= 500) {
+          throw new Error('Server error. Please try again later.');
+        } else if (error.message.includes('timeout')) {
+          throw new Error('Request timeout. Please check your connection and try again.');
+        } else {
+          throw new Error(`API error: ${error.message}`);
+        }
+      }
+
+      // Re-throw other errors
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error('An unexpected error occurred during blueprint generation');
     }
   }
 

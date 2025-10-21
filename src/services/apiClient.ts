@@ -341,6 +341,55 @@ export class ApiClient {
   }
 
   /**
+   * Perform POST request with streaming response (SSE)
+   */
+  public async postStream(url: string, body: any, options?: RequestOptions): Promise<ReadableStream<Uint8Array>> {
+    const startTime = Date.now();
+    const requestContext: RequestContext = {
+      method: 'POST',
+      url,
+      headers: options?.headers,
+      body,
+      timestamp: startTime
+    };
+
+    await this.executeRequestInterceptors(requestContext);
+
+    try {
+      const client = await this.ensureInitialized();
+      const streamResponse = client.stream.post(url, {
+        ...this.buildOptions(options),
+        json: body
+      });
+
+      // Create a ReadableStream from the response
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          try {
+            for await (const chunk of streamResponse) {
+              controller.enqueue(chunk);
+            }
+            controller.close();
+          } catch (error) {
+            controller.error(error);
+          }
+        }
+      });
+
+      return stream;
+    } catch (error) {
+      await this.executeResponseInterceptors({
+        ...requestContext,
+        statusCode: (error as any)?.response?.statusCode,
+        duration: Date.now() - startTime,
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error))
+      });
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Perform DELETE request
    */
   public async delete<T>(url: string, options?: RequestOptions): Promise<T> {

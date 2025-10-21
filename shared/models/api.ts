@@ -75,6 +75,34 @@ export interface FlowExploreRequest {
 }
 
 /**
+ * Exploration summary for blueprint generation
+ */
+export interface ExplorationSummary {
+  totalIterations: number;
+  finalUnderstandingLevel: number;
+  finalConfidenceScore: {
+    architecture: number;
+    data_flow: number;
+    integration_points: number;
+    implementation_details: number;
+  };
+  exploredFiles: string[];
+  exploredDirectories: string[];
+  keyFindings: string[];
+}
+
+/**
+ * Request to generate blueprint from exploration results
+ */
+export interface FlowBlueprintFromExplorationRequest {
+  implementationGoal: string;
+  explorationSummary: ExplorationSummary;
+  explorationHistory: ExplorationHistory[];
+  cumulativeKnowledge: CumulativeKnowledge;
+  analysisContext?: any; // FlowAnalysisResponse
+}
+
+/**
  * Request to generate a blueprint for a flow
  */
 export interface FlowBlueprintRequest {

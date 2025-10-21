@@ -12,7 +12,9 @@ import type {
   ActionType,
   ActionResult,
   DirectoryEntry,
-  DirectoryListing
+  DirectoryListing,
+  ActionResultMetadata,
+  SearchQuality
 } from "../../types/flowAnalysisTypes";
 
 export class ContextManager {
@@ -184,6 +186,103 @@ export class ContextManager {
   }
 
   /**
+   * Validate search results for quality and relevance
+   * @param results - Search results from embedding manager
+   * @param minSimilarity - Minimum acceptable similarity threshold (default: 0.3)
+   * @returns Validation result with quality metrics
+   */
+  private validateSearchResults(
+    results: any[],
+    minSimilarity: number = 0.3
+  ): { valid: boolean; quality: SearchQuality; error?: string } {
+    // Check if results array is empty
+    if (!results || results.length === 0) {
+      return {
+        valid: false,
+        quality: {
+          topSimilarity: 0,
+          avgSimilarity: 0,
+          resultCount: 0,
+          filteredCount: 0
+        },
+        error: 'No search results found'
+      };
+    }
+
+    // Filter results by minimum similarity threshold
+    const validResults = results.filter(r => r.similarity >= minSimilarity);
+    const filteredCount = results.length - validResults.length;
+
+    // Calculate quality metrics
+    const similarities = results.map(r => r.similarity);
+    const topSimilarity = Math.max(...similarities);
+    const avgSimilarity = similarities.reduce((sum, s) => sum + s, 0) / similarities.length;
+
+    const quality: SearchQuality = {
+      topSimilarity,
+      avgSimilarity,
+      resultCount: results.length,
+      filteredCount
+    };
+
+    // Check if any results meet the quality threshold
+    if (validResults.length === 0) {
+      return {
+        valid: false,
+        quality,
+        error: `All results below quality threshold (max similarity: ${topSimilarity.toFixed(3)})`
+      };
+    }
+
+    return {
+      valid: true,
+      quality
+    };
+  }
+
+  /**
+   * Normalize a path from the API to ensure consistent format
+   * Removes leading slashes, ./ prefixes, trims whitespace, and collapses multiple slashes
+   * @param inputPath - Raw path from API
+   * @returns Normalized relative path or "." for workspace root
+   * @throws Error if path is empty after trimming
+   */
+  private normalizePath(inputPath: string): string {
+    // Trim whitespace
+    let normalized = inputPath.trim();
+
+    // Validate not empty
+    if (normalized.length === 0) {
+      throw new Error('Path cannot be empty');
+    }
+
+    // Handle root directory cases
+    if (normalized === '/' || normalized === '//') {
+      return '.';
+    }
+
+    // Remove leading slash
+    if (normalized.startsWith('/')) {
+      normalized = normalized.substring(1);
+    }
+
+    // Remove leading ./
+    if (normalized.startsWith('./')) {
+      normalized = normalized.substring(2);
+    }
+
+    // Collapse multiple consecutive slashes
+    normalized = normalized.replace(/\/+/g, '/');
+
+    // If empty after normalization (e.g., was "./" or "/"), return root
+    if (normalized.length === 0 || normalized === '.') {
+      return '.';
+    }
+
+    return normalized;
+  }
+
+  /**
    * Perform an action during code exploration
    */
   public async performExplorationAction(actionType: ActionType, parameters: any): Promise<ActionResult> {
@@ -222,11 +321,15 @@ export class ContextManager {
    * Read file content
    */
   private async performReadFile(filePath: string, timestamp: string): Promise<ActionResult> {
+    const originalPath = filePath;
     try {
       // Validate file path
       if (!filePath || filePath.trim().length === 0) {
         throw new Error('File path cannot be empty');
       }
+
+      // Normalize the path
+      const normalizedPath = this.normalizePath(filePath);
 
       // Get workspace folders
       const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -236,7 +339,7 @@ export class ContextManager {
 
       // Resolve absolute path
       const workspaceRoot = workspaceFolders[0].uri;
-      const fileUri = vscode.Uri.joinPath(workspaceRoot, filePath);
+      const fileUri = vscode.Uri.joinPath(workspaceRoot, normalizedPath);
 
       // Read file
       const fileContent = await vscode.workspace.fs.readFile(fileUri);
@@ -246,21 +349,37 @@ export class ContextManager {
         actionType: 'read_file',
         success: true,
         data: {
-          path: filePath,
+          path: normalizedPath,
           content,
           lines: content.split('\n').length,
           size: fileContent.byteLength
         },
-        timestamp
+        timestamp,
+        metadata: {
+          originalPath,
+          normalizedPath
+        }
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      let normalizedPath = originalPath;
+      try {
+        normalizedPath = this.normalizePath(originalPath);
+      } catch {
+        // Keep original path if normalization fails
+      }
       return {
         actionType: 'read_file',
         success: false,
         data: null,
         error: `Failed to read file: ${errorMessage}`,
-        timestamp
+        timestamp,
+        metadata: {
+          originalPath,
+          normalizedPath,
+          errorCategory: errorMessage.includes('File not found') ? 'FileNotFound' : 'FileSystem',
+          suggestion: 'Verify file path with list_directory action'
+        }
       };
     }
   }
@@ -278,39 +397,49 @@ export class ContextManager {
       // Use embedding manager to find similar code
       const results = await this.embeddingManager.findSimilar(query, 10);
 
-      // TODO: Remove debug code
-      console.log(282, {
-        actionType: 'search_content',
-        success: true,
-        data: {
-          query,
-          scope,
-          results: results.map(r => ({
-            text: r.text,
-            similarity: r.similarity,
-            file: r.metadata.filePath,
-            chunkIndex: r.metadata.chunkIndex
-          })),
-          totalMatches: results.length
-        },
-        timestamp
-      });
+      // Validate search results quality
+      const validation = this.validateSearchResults(results, 0.3);
 
+      // If validation failed, return failure with quality info
+      if (!validation.valid) {
+        return {
+          actionType: 'search_content',
+          success: false,
+          data: {
+            query,
+            scope,
+            results: [],
+            totalMatches: 0
+          },
+          error: validation.error || 'Search quality validation failed',
+          timestamp,
+          metadata: {
+            searchQuality: validation.quality
+          }
+        };
+      }
+
+      // Return successful results with quality metadata
       return {
         actionType: 'search_content',
         success: true,
         data: {
           query,
           scope,
-          results: results.map(r => ({
-            text: r.text,
-            similarity: r.similarity,
-            file: r.metadata.filePath,
-            chunkIndex: r.metadata.chunkIndex
-          })),
-          totalMatches: results.length
+          results: results
+            .filter(r => r.similarity >= 0.3) // Filter low-quality results
+            .map(r => ({
+              text: r.text,
+              similarity: r.similarity,
+              file: r.metadata.filePath,
+              chunkIndex: r.metadata.chunkIndex
+            })),
+          totalMatches: results.filter(r => r.similarity >= 0.3).length
         },
-        timestamp
+        timestamp,
+        metadata: {
+          searchQuality: validation.quality
+        }
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -319,7 +448,11 @@ export class ContextManager {
         success: false,
         data: null,
         error: `Failed to search content: ${errorMessage}`,
-        timestamp
+        timestamp,
+        metadata: {
+          errorCategory: 'SearchError',
+          suggestion: 'Check if embeddings are initialized or try different search terms'
+        }
       };
     }
   }
@@ -389,11 +522,15 @@ export class ContextManager {
     recursive: boolean = false,
     timestamp: string
   ): Promise<ActionResult> {
+    const originalPath = directoryPath;
     try {
       // Validate directory path
       if (!directoryPath || directoryPath.trim().length === 0) {
         throw new Error('Directory path cannot be empty');
       }
+
+      // Normalize the path
+      const normalizedPath = this.normalizePath(directoryPath);
 
       // Get workspace folders
       const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -403,7 +540,6 @@ export class ContextManager {
 
       // Resolve absolute path
       const workspaceRoot = workspaceFolders[0].uri;
-      const normalizedPath = directoryPath.trim();
       const dirUri = normalizedPath === '.' ? workspaceRoot : vscode.Uri.joinPath(workspaceRoot, normalizedPath);
 
       // Read directory contents
@@ -425,16 +561,32 @@ export class ContextManager {
         actionType: 'list_directory',
         success: true,
         data: listing,
-        timestamp
+        timestamp,
+        metadata: {
+          originalPath,
+          normalizedPath
+        }
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      let normalizedPath = originalPath;
+      try {
+        normalizedPath = this.normalizePath(originalPath);
+      } catch {
+        // Keep original path if normalization fails
+      }
       return {
         actionType: 'list_directory',
         success: false,
         data: null,
         error: `Failed to list directory: ${errorMessage}`,
-        timestamp
+        timestamp,
+        metadata: {
+          originalPath,
+          normalizedPath,
+          errorCategory: errorMessage.includes('not found') ? 'DirectoryNotFound' : 'FileSystem',
+          suggestion: 'Verify directory path with parent directory listing'
+        }
       };
     }
   }

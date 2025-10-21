@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import { vscode } from '@/utilities/vscode';
-import designDocument from '@/pages/sample-blueprint.txt?raw';
 import type {
     ExplorerResponse,
     ExplorerContext,
@@ -26,6 +25,8 @@ interface DesignState {
     blueprint: string;
     isEditing: boolean;
     editableContent: string;
+    blueprintGenerating: boolean;
+    blueprintReady: boolean;
 
     // Explorer context
     explorerContext: ExplorerContext;
@@ -34,6 +35,9 @@ interface DesignState {
     explorationHistory: ExplorationHistory[];
     cumulativeKnowledge: CumulativeKnowledge;
     exploredTargets: Set<string>;
+
+    // Analysis context storage
+    analysisContext: any | null;
 
     // Message event handler
     messageHandler: ((event: MessageEvent) => void) | null;
@@ -45,7 +49,9 @@ export const useDesignStore = defineStore('design', {
         isAnalyzing: false,
         blueprint: '',
         isEditing: false,
-        editableContent: designDocument,
+        editableContent: '',
+        blueprintGenerating: false,
+        blueprintReady: false,
         explorerContext: {
             isExploring: false,
             currentIteration: 0,
@@ -63,6 +69,7 @@ export const useDesignStore = defineStore('design', {
             explored_directories: []
         },
         exploredTargets: new Set<string>(),
+        analysisContext: null,
         messageHandler: null
     }),
 
@@ -106,10 +113,9 @@ export const useDesignStore = defineStore('design', {
         },
 
         /**
-         * Initialize the store - load blueprint and set up message listener
+         * Initialize the store - set up message listener
          */
         initialize() {
-            this.loadBlueprint();
             this.setupMessageListener();
         },
 
@@ -118,26 +124,6 @@ export const useDesignStore = defineStore('design', {
          */
         cleanup() {
             this.removeMessageListener();
-        },
-
-        /**
-         * Load blueprint with mock stream
-         */
-        loadBlueprint() {
-            // Manually implement streaming effect for store state
-            let index = 0;
-            const interval = 100;
-            const chunkSize = 50;
-
-            const intervalId = setInterval(() => {
-                if (index < designDocument.length) {
-                    const chunk = designDocument.slice(index, index + chunkSize);
-                    this.blueprint += chunk;
-                    index += chunkSize;
-                } else {
-                    clearInterval(intervalId);
-                }
-            }, interval);
         },
 
         /**
@@ -152,7 +138,6 @@ export const useDesignStore = defineStore('design', {
          */
         cancelEditing() {
             this.isEditing = false;
-            this.editableContent = designDocument;
         },
 
         /**
@@ -253,6 +238,9 @@ export const useDesignStore = defineStore('design', {
         handleAnalysisResponse(analysis: any) {
             // Remove loading message
             this.removeLoadingMessages();
+
+            // Store analysis context for later use in blueprint generation
+            this.analysisContext = analysis;
 
             // Add analysis response
             this.addMessage({
@@ -419,8 +407,25 @@ export const useDesignStore = defineStore('design', {
                 this.addMessage({
                     role: 'assistant',
                     type: 'log',
-                    content: `Exploration complete! Understanding level: ${response.understanding_level}%`
+                    content: `Exploration complete! Understanding level: ${(response.understanding_level * 100).toFixed(0)}%`
                 });
+
+                // Check if understanding level is sufficient for blueprint generation
+                if (response.understanding_level >= 0.7) {
+                    this.addMessage({
+                        role: 'assistant',
+                        type: 'log',
+                        content: 'Starting blueprint generation...'
+                    });
+                    this.requestBlueprintGeneration(flowId);
+                } else {
+                    this.addMessage({
+                        role: 'assistant',
+                        type: 'log',
+                        content: 'Understanding level too low for blueprint generation. Manual intervention required.'
+                    });
+                }
+
                 this.stopExploration();
                 return;
             }
@@ -498,6 +503,58 @@ export const useDesignStore = defineStore('design', {
         },
 
         /**
+         * Request blueprint generation from extension
+         */
+        requestBlueprintGeneration(flowId: string = 'flow-123') {
+            this.blueprintGenerating = true;
+            this.blueprint = ''; // Clear any existing blueprint
+            const clonedData = JSON.parse(JSON.stringify({
+                flowId,
+                implementationGoal: this.explorerContext.implementationGoal,
+                explorationHistory: this.explorationHistory,
+                cumulativeKnowledge: this.cumulativeKnowledge,
+                analysisContext: this.analysisContext
+            }));
+
+            vscode.postMessage({
+                command: 'generateBlueprintFromExploration',
+                data: clonedData,
+            });
+        },
+
+        /**
+         * Handle blueprint chunk from extension
+         */
+        handleBlueprintChunk(chunk: string) {
+            this.blueprint += chunk;
+        },
+
+        /**
+         * Handle blueprint generation complete
+         */
+        handleBlueprintComplete() {
+            this.blueprintGenerating = false;
+            this.blueprintReady = true;
+            this.addMessage({
+                role: 'assistant',
+                type: 'log',
+                content: 'Blueprint generation complete!'
+            });
+        },
+
+        /**
+         * Handle blueprint generation error
+         */
+        handleBlueprintError(error: string) {
+            this.blueprintGenerating = false;
+            this.addMessage({
+                role: 'assistant',
+                type: 'log',
+                content: `Blueprint generation error: ${error}`
+            });
+        },
+
+        /**
          * Stop exploration loop
          */
         stopExploration() {
@@ -538,6 +595,15 @@ export const useDesignStore = defineStore('design', {
                     case 'explorationError':
                         this.handleExplorationError(message.data.error);
                         break;
+                    case 'blueprintChunk':
+                        this.handleBlueprintChunk(message.data.chunk);
+                        break;
+                    case 'blueprintComplete':
+                        this.handleBlueprintComplete();
+                        break;
+                    case 'blueprintError':
+                        this.handleBlueprintError(message.data.error);
+                        break;
                 }
             };
 
@@ -571,7 +637,9 @@ export const useDesignStore = defineStore('design', {
             this.isAnalyzing = false;
             this.blueprint = '';
             this.isEditing = false;
-            this.editableContent = designDocument;
+            this.editableContent = '';
+            this.blueprintGenerating = false;
+            this.blueprintReady = false;
             this.explorerContext = {
                 isExploring: false,
                 currentIteration: 0,
@@ -589,6 +657,7 @@ export const useDesignStore = defineStore('design', {
                 explored_directories: []
             };
             this.exploredTargets = new Set<string>();
+            this.analysisContext = null;
         }
     }
 });

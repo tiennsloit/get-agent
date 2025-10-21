@@ -91,4 +91,4 @@ export type ExplorationHistory = z.infer<typeof ExplorationHistorySchema>;
 export type CumulativeKnowledge = z.infer<typeof CumulativeKnowledgeSchema>;
 
 // Export schemas
-export { ExplorerRequestSchema, ExplorerResponseSchema };
+export { ExplorerRequestSchema, ExplorerResponseSchema, ExplorationHistorySchema, CumulativeKnowledgeSchema };

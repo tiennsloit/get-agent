@@ -148,6 +148,27 @@ export interface ExplorerResponse {
 }
 
 /**
+ * Search quality metadata
+ */
+export interface SearchQuality {
+  topSimilarity: number;      // Highest similarity score
+  avgSimilarity: number;      // Average of all results
+  resultCount: number;        // Number of results returned
+  filteredCount: number;      // Results below threshold
+}
+
+/**
+ * Action result metadata
+ */
+export interface ActionResultMetadata {
+  originalPath?: string;      // Original path from API (for read_file/list_directory)
+  normalizedPath?: string;    // Normalized path used (for read_file/list_directory)
+  searchQuality?: SearchQuality; // Search quality metrics (for search_content)
+  errorCategory?: string;     // Error category for troubleshooting
+  suggestion?: string;        // Suggested action for error recovery
+}
+
+/**
  * Result from executing an action
  */
 export interface ActionResult {
@@ -156,6 +177,7 @@ export interface ActionResult {
   data: any;
   error?: string;
   timestamp: string;
+  metadata?: ActionResultMetadata;
 }
 
 /**
