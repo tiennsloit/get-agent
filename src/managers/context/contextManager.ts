@@ -186,7 +186,7 @@ export class ContextManager {
   /**
    * Perform an action during code exploration
    */
-  public async performAction(actionType: ActionType, parameters: any): Promise<ActionResult> {
+  public async performExplorationAction(actionType: ActionType, parameters: any): Promise<ActionResult> {
     const timestamp = new Date().toISOString();
     
     try {
@@ -277,6 +277,24 @@ export class ContextManager {
 
       // Use embedding manager to find similar code
       const results = await this.embeddingManager.findSimilar(query, 10);
+
+      // TODO: Remove debug code
+      console.log(282, {
+        actionType: 'search_content',
+        success: true,
+        data: {
+          query,
+          scope,
+          results: results.map(r => ({
+            text: r.text,
+            similarity: r.similarity,
+            file: r.metadata.filePath,
+            chunkIndex: r.metadata.chunkIndex
+          })),
+          totalMatches: results.length
+        },
+        timestamp
+      });
 
       return {
         actionType: 'search_content',

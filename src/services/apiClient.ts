@@ -52,6 +52,8 @@ export interface ResponseContext extends RequestContext {
   duration: number;
   /** Whether request succeeded */
   success: boolean;
+  /** Response body (for successful requests) */
+  responseBody?: any;
   /** Error if request failed */
   error?: Error;
 }
@@ -206,7 +208,7 @@ export class ApiClient {
       statusCode: context.statusCode,
       duration: `${context.duration}ms`,
       timestamp: new Date(context.timestamp).toISOString(),
-      response: context.success ? context.body : context.error
+      response: context.success ? context.responseBody : context.error
     });
   }
 
@@ -233,7 +235,8 @@ export class ApiClient {
         ...requestContext,
         statusCode: response.statusCode,
         duration: Date.now() - startTime,
-        success: true
+        success: true,
+        responseBody: result
       });
 
       return result;
@@ -276,7 +279,8 @@ export class ApiClient {
         ...requestContext,
         statusCode: response.statusCode,
         duration: Date.now() - startTime,
-        success: true
+        success: true,
+        responseBody: result
       });
 
       return result;
@@ -319,7 +323,8 @@ export class ApiClient {
         ...requestContext,
         statusCode: response.statusCode,
         duration: Date.now() - startTime,
-        success: true
+        success: true,
+        responseBody: result
       });
 
       return result;
@@ -358,7 +363,8 @@ export class ApiClient {
         ...requestContext,
         statusCode: response.statusCode,
         duration: Date.now() - startTime,
-        success: true
+        success: true,
+        responseBody: result
       });
 
       return result;

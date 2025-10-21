@@ -47,7 +47,7 @@ function filterExplorationContext(
         actions_performed: mediumHistory.map(h => `${h.action_summary.type} on ${h.action_summary.target}`),
         understanding_progression: mediumHistory.map(h => h.understanding_level),
         observation_summaries: mediumHistory.map(h => {
-            if (!h.observation) return null;
+            if (!h.observation) { return null; }
             const obsStr = typeof h.observation === 'string' ? h.observation : JSON.stringify(h.observation);
             return obsStr.substring(0, 200); // First 200 chars as summary
         }).filter(Boolean)
@@ -64,17 +64,17 @@ function filterExplorationContext(
 
     // Build filtered history string
     const historyParts = [];
-    
+
     if (tier3Context) {
         historyParts.push(`\n### Early Exploration (Iterations 1-${olderHistory.length})`);
         historyParts.push(JSON.stringify(tier3Context, null, 2));
     }
-    
+
     if (tier2Context) {
         historyParts.push(`\n### Medium History (Iterations ${tier2Context.iterations})`);
         historyParts.push(JSON.stringify(tier2Context, null, 2));
     }
-    
+
     historyParts.push(`\n### Recent Context (Last ${recentHistory.length} iterations)`);
     historyParts.push(JSON.stringify(tier1Context, null, 2));
 

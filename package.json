@@ -163,6 +163,7 @@
     "inversify": "^7.5.1",
     "js-yaml": "^4.1.0",
     "lodash": "^4.17.21",
+    "node-llama-cpp": "^3.14.0",
     "openai": "^5.3.0",
     "uuid": "^11.1.0",
     "web-tree-sitter": "^0.25.3"

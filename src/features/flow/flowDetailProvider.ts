@@ -211,7 +211,7 @@ export class FlowDetailProvider {
     });
 
     try {
-      const result: ActionResult = await this.contextManager.performAction(
+      const result: ActionResult = await this.contextManager.performExplorationAction(
         data.action.type,
         data.action.parameters,
       );

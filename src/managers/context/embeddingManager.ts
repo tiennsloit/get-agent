@@ -42,10 +42,21 @@ export class EmbeddingManager {
 
     public async initialize(report: (params: { message: string, increment?: number }) => void): Promise<void> {
         try {
-            report({ message: "Embedding feature is disabled (state management removed)" });
-            // State management has been removed - embedding feature disabled
-            // This method is kept for compatibility but does nothing
-            report({ message: "Embedder initialization skipped", increment: 100 });
+            report({ message: "Initializing embedder..." });
+
+            const modelPath = vscode.Uri.joinPath(
+                this.extensionContext.extensionUri,
+                "assets",
+                "models",
+                "all-MiniLM-L6-v2.gguf"
+            ).fsPath;
+
+            const { getLlama } = await import('node-llama-cpp');
+            const llama = await getLlama();
+            this.model = await llama.loadModel({ modelPath });
+            this.context = await this.model.createEmbeddingContext();
+
+            report({ message: "Embedder initialized", increment: 100 });
         } catch (error) {
             throw new Error(`Failed to initialize embedder: ${error instanceof Error ? error.message : String(error)}`);
         }
