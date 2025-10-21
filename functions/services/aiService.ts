@@ -58,12 +58,12 @@ export class AIService {
   ): Promise<void> {
     try {
       const stream = await groq.chat.completions.create({
-        model: "moonshotai/kimi-k2-instruct-0905",
+        model: "openai/gpt-oss-120b",
         messages: messages.map(msg => ({
           role: msg.role as "system" | "user" | "assistant",
           content: msg.content
         })),
-        temperature: options?.temperature ?? 0.3,
+        temperature: options?.temperature ?? 0.1,
         max_tokens: options?.maxTokens ?? 16384,
         top_p: options?.topP ?? 1,
         stream: true,

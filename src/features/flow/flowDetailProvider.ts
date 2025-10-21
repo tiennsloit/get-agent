@@ -279,7 +279,7 @@ export class FlowDetailProvider {
       try {
         while (true) {
           const { done, value } = await reader.read();
-          
+
           if (done) {
             // Send completion signal
             this.panel?.webview.postMessage({
@@ -293,12 +293,12 @@ export class FlowDetailProvider {
           const chunk = decoder.decode(value, { stream: true });
           const lines = chunk.split('\n');
 
-          for (const line of lines) {
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
             if (line.startsWith('event: chunk')) {
               // Next line should be data
-              const dataLineIndex = lines.indexOf(line) + 1;
-              if (dataLineIndex < lines.length) {
-                const dataLine = lines[dataLineIndex];
+              if (i + 1 < lines.length) {
+                const dataLine = lines[i + 1];
                 if (dataLine.startsWith('data: ')) {
                   try {
                     const data = JSON.parse(dataLine.substring(6));
@@ -312,9 +312,8 @@ export class FlowDetailProvider {
                 }
               }
             } else if (line.startsWith('event: error')) {
-              const dataLineIndex = lines.indexOf(line) + 1;
-              if (dataLineIndex < lines.length) {
-                const dataLine = lines[dataLineIndex];
+              if (i + 1 < lines.length) {
+                const dataLine = lines[i + 1];
                 if (dataLine.startsWith('data: ')) {
                   try {
                     const data = JSON.parse(dataLine.substring(6));

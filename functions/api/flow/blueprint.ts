@@ -101,8 +101,7 @@ export default async function handler(request: Request): Promise<Response> {
                                 const data = `event: chunk\ndata: ${JSON.stringify({ chunk })}\n\n`;
                                 controller.enqueue(encoder.encode(data));
                             }
-                        },
-                        { temperature: 0.3, maxTokens: 16384 }
+                        }
                     );
 
                     // Send completion event

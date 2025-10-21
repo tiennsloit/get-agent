@@ -16,8 +16,8 @@ import type {
   ExplorationSummary,
   ProjectFile
 } from '../../shared/models/api';
-import type { 
-  FlowAnalysisResponse, 
+import type {
+  FlowAnalysisResponse,
   ExplorerResponse,
   ActionType,
   ActionResult,
@@ -52,7 +52,7 @@ export interface IFlowService {
 
   // User Request Analysis
   analyzeUserRequest(userRequest: string): Promise<FlowAnalysisResponse>;
-  
+
   // Code Exploration
   exploreCode(
     implementationGoal: string,
@@ -61,7 +61,7 @@ export interface IFlowService {
     explorationHistory?: ExplorationHistory[],
     cumulativeKnowledge?: CumulativeKnowledge
   ): Promise<ExplorerResponse>;
-  
+
   // Blueprint Generation from Exploration
   generateBlueprintFromExploration(
     implementationGoal: string,
@@ -69,7 +69,7 @@ export interface IFlowService {
     cumulativeKnowledge: CumulativeKnowledge,
     analysisContext?: FlowAnalysisResponse
   ): Promise<ReadableStream<Uint8Array>>;
-  
+
   // Event Management
   onFlowUpdate(listener: (flowId?: string) => void): () => void;
 }
@@ -85,7 +85,7 @@ export class FlowService implements IFlowService {
   ) {
     // Initialize with some mock data for testing
     this.initializeMockData();
-    
+
     // Initialize API client
     this.apiClient = new ApiClient();
   }
@@ -138,7 +138,7 @@ export class FlowService implements IFlowService {
   public async createFlow(request: CreateFlowRequest): Promise<string> {
     const flowId = this.generateId();
     const now = new Date().toISOString();
-    
+
     const newFlow: Flow = {
       id: flowId,
       title: request.title,
@@ -248,7 +248,7 @@ export class FlowService implements IFlowService {
    */
   public async searchFlows(query: string): Promise<FlowListItem[]> {
     const flows = Array.from(this.flows.values());
-    const filtered = flows.filter(flow => 
+    const filtered = flows.filter(flow =>
       flow.title.toLowerCase().includes(query.toLowerCase()) ||
       (flow.description && flow.description.toLowerCase().includes(query.toLowerCase()))
     );
@@ -363,7 +363,7 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
 
       // Collect project structure using ContextManager
       const codeStructure = await this.contextManager.getCodeStructure(true); // Get flattened structure
-      
+
       // Convert to expected ProjectFile format
       const projectStructure: ProjectFile[] = codeStructure?.map((file: any) => ({
         path: file.path,
@@ -474,42 +474,29 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
   ): Promise<ReadableStream<Uint8Array>> {
     try {
       // Validate input
-      if (!implementationGoal || implementationGoal.trim().length === 0) {
+      if (!implementationGoal?.trim()) {
         throw new Error('Implementation goal cannot be empty');
       }
 
-      if (!explorationHistory || explorationHistory.length === 0) {
+      if (!explorationHistory?.length) {
         throw new Error('Exploration history is required');
       }
 
       // Derive exploration summary from history
       const lastEntry = explorationHistory[explorationHistory.length - 1];
-      
-      // Collect all unique files and directories
-      const allFiles = new Set<string>();
-      const allDirectories = new Set<string>();
-      
-      explorationHistory.forEach(entry => {
-        entry.explored_files.forEach(f => allFiles.add(f));
-        entry.explored_directories.forEach(d => allDirectories.add(d));
-      });
-
-      // Extract key findings from most recent iterations (last 5)
-      const recentIterations = explorationHistory.slice(-5);
-      const keyFindings: string[] = [];
-      recentIterations.forEach(entry => {
-        entry.key_findings.forEach(finding => {
-          if (!keyFindings.includes(finding) && keyFindings.length < 10) {
-            keyFindings.push(finding);
-          }
-        });
-      });
+      const allFiles = new Set(explorationHistory.flatMap(e => e.explored_files));
+      const allDirectories = new Set(explorationHistory.flatMap(e => e.explored_directories));
+      const keyFindings = explorationHistory
+        .slice(-5)
+        .flatMap(e => e.key_findings)
+        .filter((f, i, arr) => arr.indexOf(f) === i)
+        .slice(0, 10);
 
       const explorationSummary: ExplorationSummary = {
         totalIterations: explorationHistory.length,
         finalUnderstandingLevel: lastEntry.understanding_level,
         finalConfidenceScore: {
-          architecture: 0.8, // These would come from the last explorer response
+          architecture: 0.8,
           data_flow: 0.7,
           integration_points: 0.75,
           implementation_details: 0.85
@@ -519,7 +506,7 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
         keyFindings
       };
 
-      // Build API request payload
+      // Build API request
       const requestPayload: FlowBlueprintFromExplorationRequest = {
         implementationGoal: implementationGoal.trim(),
         explorationSummary,
@@ -529,32 +516,17 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
       };
 
       // Call API and return stream
-      const stream = await this.apiClient.postStream(
-        'flow/blueprint',
-        requestPayload
-      );
-
-      return stream;
+      return await this.apiClient.postStream('flow/blueprint', requestPayload);
     } catch (error) {
-      // Handle API errors with user-friendly messages
       if (error instanceof ApiError) {
-        if (error.statusCode === 400) {
-          throw new Error(`Invalid request: ${error.message}`);
-        } else if (error.statusCode && error.statusCode >= 500) {
-          throw new Error('Server error. Please try again later.');
-        } else if (error.message.includes('timeout')) {
-          throw new Error('Request timeout. Please check your connection and try again.');
-        } else {
-          throw new Error(`API error: ${error.message}`);
-        }
+        const message = error.statusCode === 400 ? `Invalid request: ${error.message}` :
+          error.statusCode && error.statusCode >= 500 ? 'Server error. Please try again later.' :
+            error.message.includes('timeout') ? 'Request timeout. Please check your connection and try again.' :
+              `API error: ${error.message}`;
+        throw new Error(message);
       }
 
-      // Re-throw other errors
-      if (error instanceof Error) {
-        throw error;
-      }
-
-      throw new Error('An unexpected error occurred during blueprint generation');
+      throw error instanceof Error ? error : new Error('An unexpected error occurred during blueprint generation');
     }
   }
 

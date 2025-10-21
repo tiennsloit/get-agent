@@ -543,7 +543,6 @@ export const useDesignStore = defineStore('design', {
          */
         handleBlueprintChunk(chunk: string) {
             this.blueprint += chunk;
-            console.log('Blueprint:', this.blueprint);
         },
 
         /**

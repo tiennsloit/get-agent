@@ -9,30 +9,42 @@
       style="background-image: repeating-linear-gradient(rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 20px); background-size: 20px 20px;">
 
       <!-- Loading states -->
-      <div v-if="isAnalyzing && !isExploring && !blueprintGenerating" class="flex items-center justify-center h-full">
-        <div class="text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p class="text-lg text-gray-300">Analyzing your request...</p>
+      <template v-if="!blueprint">
+        <div v-if="isAnalyzing && !isExploring && !blueprintGenerating" class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p class="text-lg text-gray-300">Analyzing your request...</p>
+          </div>
         </div>
-      </div>
 
-      <div v-else-if="isExploring" class="flex items-center justify-center h-full">
-        <div class="text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
-          <p class="text-lg text-gray-300">Exploring codebase...</p>
-          <p class="text-sm text-gray-400 mt-2">Iteration {{ currentIteration }}</p>
-        </div>
-      </div>
+        <div v-else-if="isExploring" class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+            <p class="text-lg text-gray-300">Exploring codebase...</p>
 
-      <div v-else-if="blueprintGenerating" class="flex items-center justify-center h-full">
-        <div class="text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto mb-4"></div>
-          <p class="text-lg text-gray-300">Generating implementation blueprint...</p>
+            <div class="w-64 mt-4">
+              <div class="flex justify-between text-xs text-gray-400 mb-1">
+                <span>Progress: </span>
+                <span>{{ currentIteration }}%</span>
+              </div>
+              <div class="w-full bg-gray-700 rounded-full h-2">
+                <div class="bg-blue-400 h-2 rounded-full transition-all duration-300"
+                  :style="{ width: `${(currentIteration / 20) * 100}%` }"></div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+
+        <div v-else-if="blueprintGenerating" class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto mb-4"></div>
+            <p class="text-lg text-gray-300">Generating implementation blueprint...</p>
+          </div>
+        </div>
+      </template>
 
       <!-- Blueprint content -->
-      <VueMarkdown v-if="!isEditing && blueprint" :markdown="blueprint" :custom-attrs="customAttrs"
+      <VueMarkdown v-else-if="!isEditing" :markdown="blueprint" :custom-attrs="customAttrs"
         class="text-xs vue-markdown" :rehype-plugins="[rehypeRaw]">
         <template #code="{ inline, content, ...props }">
           <code v-if="inline" style="color: rgb(230, 153, 191) !important">{{ content }}</code>
@@ -40,7 +52,7 @@
         </template>
       </VueMarkdown>
 
-      <textarea v-else-if="isEditing" v-model="editableContent"
+      <textarea v-else="isEditing" v-model="editableContent"
         class="w-full h-full min-h-[400px] p-2 bg-black/30 rounded border border-gray-500/50 font-mono text-sm"></textarea>
 
       <!-- Empty state -->

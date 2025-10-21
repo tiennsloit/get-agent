@@ -147,7 +147,7 @@ export class ApiClient {
     const config = vscode.workspace.getConfiguration('gonext.api');
     
     return {
-      baseUrl: override?.baseUrl || config.get<string>('baseUrl', 'https://gonext.hien.one/api'),
+      baseUrl: override?.baseUrl || config.get<string>('baseUrl')!,
       timeout: override?.timeout || config.get<number>('timeout', 30000),
       retryLimit: override?.retryLimit || config.get<number>('retryLimit', 2),
       enableLogging: override?.enableLogging ?? config.get<boolean>('enableLogging', true)
