@@ -56,18 +56,43 @@ export interface FlowAnalysisResponse {
 export type ActionType = 'read_file' | 'search_content' | 'read_terminal' | 'list_directory';
 
 /**
+ * Specific parameter types for each action
+ */
+export interface ReadFileParameters {
+  path: string;
+}
+
+export interface SearchContentParameters {
+  query: string;
+  scope?: string;
+}
+
+export interface ReadTerminalParameters {
+  command: string;
+}
+
+export interface ListDirectoryParameters {
+  path: string;
+  recursive?: boolean;
+}
+
+/**
+ * Union type for all action parameters
+ */
+export type ActionParameters = 
+  | ReadFileParameters 
+  | SearchContentParameters 
+  | ReadTerminalParameters 
+  | ListDirectoryParameters;
+
+/**
  * Action to perform during exploration
  */
 export interface Action {
   type: ActionType;
-  parameters: {
-    path?: string;        // For read_file and list_directory
-    recursive?: boolean;  // For list_directory
-    query?: string;       // For search_content
-    scope?: string;       // For search_content
-    command?: string;     // For read_terminal
-  };
-  expected_insights: string;
+  parameters: ActionParameters;
+  reason: string;
+  expected_insights: string[];
 }
 
 /**

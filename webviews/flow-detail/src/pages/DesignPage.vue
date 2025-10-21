@@ -9,14 +9,14 @@
       style="background-image: repeating-linear-gradient(rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 20px); background-size: 20px 20px;">
 
       <!-- Loading states -->
-      <div v-if="isAnalyzing && !isExploring && !blueprintGenerating" class="flex items-center justify-center h-64">
+      <div v-if="isAnalyzing && !isExploring && !blueprintGenerating" class="flex items-center justify-center h-full">
         <div class="text-center">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p class="text-lg text-gray-300">Analyzing your request...</p>
         </div>
       </div>
 
-      <div v-else-if="isExploring" class="flex items-center justify-center h-64">
+      <div v-else-if="isExploring" class="flex items-center justify-center h-full">
         <div class="text-center">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
           <p class="text-lg text-gray-300">Exploring codebase...</p>
@@ -24,7 +24,7 @@
         </div>
       </div>
 
-      <div v-else-if="blueprintGenerating" class="flex items-center justify-center h-64">
+      <div v-else-if="blueprintGenerating" class="flex items-center justify-center h-full">
         <div class="text-center">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto mb-4"></div>
           <p class="text-lg text-gray-300">Generating implementation blueprint...</p>
@@ -45,7 +45,7 @@
 
       <!-- Empty state -->
       <div v-if="!blueprint && !isAnalyzing && !isExploring && !blueprintGenerating"
-        class="flex items-center justify-center h-64">
+        class="flex items-center justify-center h-full">
         <div class="text-center text-gray-400">
           <p class="text-lg">No blueprint yet</p>
           <p class="text-sm mt-2">Send a message to start the design process</p>

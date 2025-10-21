@@ -58,7 +58,7 @@ export class AIService {
   ): Promise<void> {
     try {
       const stream = await groq.chat.completions.create({
-        model: "qwen/qwen3-32b",
+        model: "moonshotai/kimi-k2-instruct-0905",
         messages: messages.map(msg => ({
           role: msg.role as "system" | "user" | "assistant",
           content: msg.content

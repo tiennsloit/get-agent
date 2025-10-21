@@ -364,18 +364,34 @@ export const useDesignStore = defineStore('design', {
             const exploredFiles: string[] = [];
             const exploredDirectories: string[] = [];
 
-            if (response.action.type === 'read_file' && response.action.parameters.path) {
-                exploredFiles.push(response.action.parameters.path);
-                this.exploredTargets.add(response.action.parameters.path);
-            } else if (response.action.type === 'list_directory' && response.action.parameters.path) {
-                exploredDirectories.push(response.action.parameters.path);
-                this.exploredTargets.add(response.action.parameters.path);
+            // Type-safe parameter extraction based on action type
+            let target = 'unknown';
+            if (response.action.type === 'read_file') {
+                const params = response.action.parameters as { path: string };
+                if (params.path) {
+                    exploredFiles.push(params.path);
+                    this.exploredTargets.add(params.path);
+                    target = params.path;
+                }
+            } else if (response.action.type === 'list_directory') {
+                const params = response.action.parameters as { path: string; recursive?: boolean };
+                if (params.path) {
+                    exploredDirectories.push(params.path);
+                    this.exploredTargets.add(params.path);
+                    target = params.path;
+                }
+            } else if (response.action.type === 'search_content') {
+                const params = response.action.parameters as { query: string; scope?: string };
+                target = params.query;
+            } else if (response.action.type === 'read_terminal') {
+                const params = response.action.parameters as { command: string };
+                target = params.command;
             }
 
             // Create action summary
             const actionSummary = {
                 type: response.action.type,
-                target: response.action.parameters.path || response.action.parameters.query || response.action.parameters.command || 'unknown',
+                target,
                 success: true // Will be updated when action result comes back
             };
 
@@ -527,6 +543,7 @@ export const useDesignStore = defineStore('design', {
          */
         handleBlueprintChunk(chunk: string) {
             this.blueprint += chunk;
+            console.log('Blueprint:', this.blueprint);
         },
 
         /**

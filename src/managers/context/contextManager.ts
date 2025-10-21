@@ -13,8 +13,12 @@ import type {
   ActionResult,
   DirectoryEntry,
   DirectoryListing,
-  ActionResultMetadata,
-  SearchQuality
+  SearchQuality,
+  ActionParameters,
+  ReadFileParameters,
+  SearchContentParameters,
+  ReadTerminalParameters,
+  ListDirectoryParameters
 } from "../../types/flowAnalysisTypes";
 
 export class ContextManager {
@@ -285,22 +289,33 @@ export class ContextManager {
   /**
    * Perform an action during code exploration
    */
-  public async performExplorationAction(actionType: ActionType, parameters: any): Promise<ActionResult> {
+  public async performExplorationAction(
+    actionType: ActionType, 
+    parameters: ActionParameters
+  ): Promise<ActionResult> {
     const timestamp = new Date().toISOString();
     
     try {
       switch (actionType) {
-        case 'read_file':
-          return await this.performReadFile(parameters.path, timestamp);
+        case 'read_file': {
+          const params = parameters as ReadFileParameters;
+          return await this.performReadFile(params.path, timestamp);
+        }
         
-        case 'search_content':
-          return await this.performSearchContent(parameters.query, parameters.scope, timestamp);
+        case 'search_content': {
+          const params = parameters as SearchContentParameters;
+          return await this.performSearchContent(params.query, params.scope, timestamp);
+        }
         
-        case 'read_terminal':
-          return await this.performReadTerminal(parameters.command, timestamp);
+        case 'read_terminal': {
+          const params = parameters as ReadTerminalParameters;
+          return await this.performReadTerminal(params.command, timestamp);
+        }
         
-        case 'list_directory':
-          return await this.performListDirectory(parameters.path, parameters.recursive || false, timestamp);
+        case 'list_directory': {
+          const params = parameters as ListDirectoryParameters;
+          return await this.performListDirectory(params.path, params.recursive || false, timestamp);
+        }
         
         default:
           throw new Error(`Unknown action type: ${actionType}`);
@@ -387,7 +402,11 @@ export class ContextManager {
   /**
    * Search content in codebase using embedding similarity
    */
-  private async performSearchContent(query: string, scope: string, timestamp: string): Promise<ActionResult> {
+  private async performSearchContent(
+    query: string, 
+    scope: string | undefined, 
+    timestamp: string
+  ): Promise<ActionResult> {
     try {
       // Validate input
       if (!query || query.trim().length === 0) {
