@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-start space-x-2 text-xs mt-4 mb-1">
+  <div class="flex w-80 items-start space-x-2 text-xs mt-4 mb-1">
     <div class="flex-1 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-4">
       <div class="space-y-3">
         <!-- Overall Understanding -->
@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import ExpandTransition from '../ExpandTransition.vue';
+import ExpandTransition from './ExpandTransition.vue';
 
 interface ConfidenceScore {
   architecture: number;

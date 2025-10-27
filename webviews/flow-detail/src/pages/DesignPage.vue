@@ -22,16 +22,15 @@
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
             <p class="text-lg text-gray-300">Exploring codebase...</p>
 
-            <div class="w-64 mt-4">
-              <div class="flex justify-between text-xs text-gray-400 mb-1">
-                <span>Progress: </span>
-                <span>{{ progressPercentage }}%</span>
-              </div>
-              <div class="w-full bg-gray-700 rounded-full h-2">
-                <div class="bg-blue-400 h-2 rounded-full transition-all duration-300"
-                  :style="{ width: `${progressPercentage}%` }"></div>
-              </div>
-            </div>
+            <!-- Replace the simple progress bar with ExplorationProgress component -->
+            <ExplorationProgress 
+              v-if="currentExplorerResponse"
+              :understanding-level="currentExplorerResponse.understanding_level"
+              :confidence-score="currentExplorerResponse.confidence_score"
+              :iteration="currentExplorerResponse.iteration"
+              :next-priorities="currentExplorerResponse.next_priorities"
+              class="mt-4"
+            />
           </div>
         </div>
 
@@ -106,6 +105,7 @@ import SaveSolidIcon from '@/components/icons/SaveSolidIcon.vue';
 import CloseSolidIcon from '@/components/icons/CloseSolidIcon.vue';
 import ChatMessagesContainer from '@/components/chat/ChatMessagesContainer.vue';
 import ChatInput from '@/components/chat/ChatInput.vue';
+import ExplorationProgress from '@/components/ExplorationProgress.vue';
 import { useDesignStore } from '@/stores/designStore';
 import { useFlowStore } from '@/stores/flowStore';
 
@@ -122,6 +122,9 @@ const isEditing = computed(() => designStore.isEditing);
 const blueprintGenerating = computed(() => designStore.blueprintGenerating);
 const blueprintReady = computed(() => designStore.blueprintReady);
 const progressPercentage = computed(() => ((currentIteration.value / 20) * 100).toFixed(0));
+
+// New computed property to get the current explorer response
+const currentExplorerResponse = computed(() => designStore.explorerContext.previousResponse);
 
 // Use v-model for editable content
 const editableContent = computed({
