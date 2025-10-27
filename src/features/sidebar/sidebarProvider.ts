@@ -3,6 +3,7 @@ import { getWebviewContent } from "../../core/utilities/getWebviewContent";
 import { INJECTION_KEYS } from "../../core/constants/injectionKeys";
 import { inject, injectable } from "inversify";
 import { FlowService } from "../../services/flowService";
+import { FlowStateManager } from "../flow/flowStateManager";
 import { SidebarMessageHandler } from "./sidebarMessageHandler";
 
 @injectable()
@@ -15,7 +16,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   constructor(
     @inject(INJECTION_KEYS.CONTEXT) private context: vscode.ExtensionContext,
-    @inject(INJECTION_KEYS.FLOW_SERVICE) private flowService: FlowService
+    @inject(INJECTION_KEYS.FLOW_SERVICE) private flowService: FlowService,
+    @inject(INJECTION_KEYS.FLOW_STATE_MANAGER) private flowStateManager: FlowStateManager
   ) {
     this._extensionUri = context.extensionUri;
     // Detect development mode
@@ -25,6 +27,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     this.messageHandler = new SidebarMessageHandler({
       context: this.context,
       flowService: this.flowService,
+      flowStateManager: this.flowStateManager,
       extensionUri: this._extensionUri,
       isDevelopment: this._isDevelopment
     });
@@ -32,6 +35,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   // Dispose all listeners when extension is deactivated
   public dispose() {
+    this.messageHandler.dispose();
     this._disposables.forEach((d) => d.dispose());
   }
 
@@ -59,6 +63,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._isDevelopment
       ? this._getDevHtml()
       : getWebviewContent(webviewView.webview, this._extensionUri, 'sidebar');
+
+    // Set webview in message handler to enable event subscriptions
+    this.messageHandler.setWebview(webviewView.webview);
 
     // Setup message handling
     this._setupMessageHandling(webviewView.webview);

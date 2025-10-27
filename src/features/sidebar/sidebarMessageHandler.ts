@@ -2,12 +2,14 @@ import * as vscode from "vscode";
 import { FlowService } from "../../services/flowService";
 import { FlowDetailProvider } from "../flow/flowDetailProvider";
 import { FlowDetailPanelRegistry } from "../flow/flowDetailPanelRegistry";
+import { FlowStateManager } from "../flow/flowStateManager";
 import { WebviewOutputCommands, WebviewInputCommands } from "../../../shared/constants/commands";
 import type { CreateFlowRequest } from "../../../shared/models/flow";
 
 export interface SidebarMessageHandlerOptions {
   context: vscode.ExtensionContext;
   flowService: FlowService;
+  flowStateManager: FlowStateManager;
   extensionUri: vscode.Uri;
   isDevelopment: boolean;
 }
@@ -18,14 +20,54 @@ export interface SidebarMessageHandlerOptions {
 export class SidebarMessageHandler {
   private context: vscode.ExtensionContext;
   private flowService: FlowService;
+  private flowStateManager: FlowStateManager;
   private extensionUri: vscode.Uri;
   private isDevelopment: boolean;
+  private webview?: vscode.Webview;
+  private unsubscribeFlowUpdates?: () => void;
 
   constructor(options: SidebarMessageHandlerOptions) {
     this.context = options.context;
     this.flowService = options.flowService;
+    this.flowStateManager = options.flowStateManager;
     this.extensionUri = options.extensionUri;
     this.isDevelopment = options.isDevelopment;
+  }
+
+  /**
+   * Set the webview instance and subscribe to flow updates
+   */
+  public setWebview(webview: vscode.Webview): void {
+    this.webview = webview;
+    
+    // Subscribe to flow state changes
+    this.unsubscribeFlowUpdates = this.flowStateManager.onFlowUpdate(() => {
+      this.syncFlowList();
+    });
+  }
+
+  /**
+   * Cleanup subscriptions
+   */
+  public dispose(): void {
+    if (this.unsubscribeFlowUpdates) {
+      this.unsubscribeFlowUpdates();
+    }
+  }
+
+  /**
+   * Sync flow list with the webview
+   */
+  private async syncFlowList(): Promise<void> {
+    if (!this.webview) {
+      return;
+    }
+
+    const flows = await this.flowService.getFlows();
+    this.webview.postMessage({
+      command: WebviewInputCommands.FLOW_LIST_UPDATE,
+      data: { flows }
+    });
   }
 
   /**

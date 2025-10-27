@@ -17,6 +17,7 @@ export class FlowStateManager {
   private static instance: FlowStateManager;
   private context: vscode.ExtensionContext;
   private flows: Map<string, Flow> = new Map();
+  private updateListeners: ((flowId?: string) => void)[] = [];
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -49,6 +50,7 @@ export class FlowStateManager {
 
     this.flows.set(flowId, flow);
     this.saveFlowsToStorage();
+    this.notifyFlowUpdate(flowId);
     
     return flowId;
   }
@@ -68,10 +70,40 @@ export class FlowStateManager {
   }
 
   /**
-   * Get flows filtered by state
+   * Get all flows as list items
    */
-  public getFlowsByState(state: FlowState): Flow[] {
-    return this.getAllFlows().filter(flow => flow.state === state);
+  public getAllFlowsAsListItems(): FlowListItem[] {
+    return this.getAllFlows()
+      .map(flow => this.toFlowListItem(flow))
+      .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+  }
+
+  /**
+   * Update flow with partial data
+   */
+  public updateFlow(flowId: string, updates: Partial<Flow>): void {
+    const flow = this.flows.get(flowId);
+    if (flow) {
+      Object.assign(flow, updates);
+      flow.lastUpdated = new Date().toISOString();
+      this.flows.set(flowId, flow);
+      this.saveFlowsToStorage();
+      this.notifyFlowUpdate(flowId);
+    }
+  }
+
+  /**
+   * Update flow title
+   */
+  public updateFlowTitle(flowId: string, title: string): void {
+    const flow = this.flows.get(flowId);
+    if (flow) {
+      flow.title = title;
+      flow.lastUpdated = new Date().toISOString();
+      this.flows.set(flowId, flow);
+      this.saveFlowsToStorage();
+      this.notifyFlowUpdate(flowId);
+    }
   }
 
   /**
@@ -97,6 +129,16 @@ export class FlowStateManager {
   }
 
   /**
+   * Get flows filtered by state as list items
+   */
+  public getFlowsByStateAsListItems(state: FlowState): FlowListItem[] {
+    return this.getAllFlows()
+      .filter(flow => flow.state === state)
+      .map(flow => this.toFlowListItem(flow))
+      .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+  }
+
+  /**
    * Update flow state
    */
   public updateFlowState(flowId: string, state: FlowState): void {
@@ -106,6 +148,7 @@ export class FlowStateManager {
       flow.lastUpdated = new Date().toISOString();
       this.flows.set(flowId, flow);
       this.saveFlowsToStorage();
+      this.notifyFlowUpdate(flowId);
     }
   }
 
@@ -121,6 +164,7 @@ export class FlowStateManager {
       flow.lastUpdated = new Date().toISOString();
       this.flows.set(flowId, flow);
       this.saveFlowsToStorage();
+      this.notifyFlowUpdate(flowId);
     }
   }
 
@@ -134,6 +178,7 @@ export class FlowStateManager {
       flow.lastUpdated = new Date().toISOString();
       this.flows.set(flowId, flow);
       this.saveFlowsToStorage();
+      this.notifyFlowUpdate(flowId);
     }
   }
 
@@ -147,6 +192,7 @@ export class FlowStateManager {
       flow.lastUpdated = new Date().toISOString();
       this.flows.set(flowId, flow);
       this.saveFlowsToStorage();
+      this.notifyFlowUpdate(flowId);
     }
   }
 
@@ -156,6 +202,7 @@ export class FlowStateManager {
   public deleteFlow(flowId: string): void {
     this.flows.delete(flowId);
     this.saveFlowsToStorage();
+    this.notifyFlowUpdate();
   }
 
   /**
@@ -170,6 +217,26 @@ export class FlowStateManager {
       )
       .map(flow => this.toFlowListItem(flow))
       .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+  }
+
+  /**
+   * Subscribe to flow updates
+   */
+  public onFlowUpdate(listener: (flowId?: string) => void): () => void {
+    this.updateListeners.push(listener);
+    return () => {
+      const index = this.updateListeners.indexOf(listener);
+      if (index !== -1) {
+        this.updateListeners.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Notify all listeners of flow updates
+   */
+  private notifyFlowUpdate(flowId?: string): void {
+    this.updateListeners.forEach(listener => listener(flowId));
   }
 
   /**

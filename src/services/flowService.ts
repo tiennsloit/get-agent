@@ -28,6 +28,7 @@ import { ApiClient, ApiError } from './apiClient';
 import { injectable, inject } from 'inversify';
 import { INJECTION_KEYS } from '../core/constants/injectionKeys';
 import { ContextManager } from '../managers/context/contextManager';
+import { FlowStateManager } from '../features/flow/flowStateManager';
 
 export interface IFlowService {
   // CRUD Operations
@@ -76,192 +77,84 @@ export interface IFlowService {
 
 @injectable()
 export class FlowService implements IFlowService {
-  private flows: Map<string, Flow> = new Map();
-  private updateListeners: ((flowId?: string) => void)[] = [];
   private apiClient: ApiClient;
 
   constructor(
-    @inject(INJECTION_KEYS.CONTEXT_MANAGER) private contextManager: ContextManager
+    @inject(INJECTION_KEYS.CONTEXT_MANAGER) private contextManager: ContextManager,
+    @inject(INJECTION_KEYS.FLOW_STATE_MANAGER) private flowStateManager: FlowStateManager
   ) {
-    // Initialize with some mock data for testing
-    this.initializeMockData();
-
     // Initialize API client
     this.apiClient = new ApiClient();
-  }
-
-  /**
-   * Initialize with some mock data
-   */
-  private initializeMockData(): void {
-    const mockFlows: Flow[] = [
-      {
-        id: '1',
-        title: 'Implement user authentication',
-        description: 'Add user login and registration functionality',
-        state: FlowState.TODO,
-        tasks: [],
-        progress: { done: 0, total: 5 },
-        startTime: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      },
-      {
-        id: '2',
-        title: 'Create dashboard UI',
-        description: 'Design and implement the main dashboard interface',
-        state: FlowState.DESIGNING,
-        tasks: [],
-        progress: { done: 2, total: 8 },
-        startTime: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      },
-      {
-        id: '3',
-        title: 'API integration',
-        description: 'Connect frontend to backend services',
-        state: FlowState.EXECUTING,
-        tasks: [],
-        progress: { done: 3, total: 6 },
-        startTime: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      }
-    ];
-
-    mockFlows.forEach(flow => {
-      this.flows.set(flow.id, flow);
-    });
   }
 
   /**
    * Create a new flow
    */
   public async createFlow(request: CreateFlowRequest): Promise<string> {
-    const flowId = this.generateId();
-    const now = new Date().toISOString();
-
-    const newFlow: Flow = {
-      id: flowId,
-      title: request.title,
-      state: FlowState.TODO,
-      tasks: [],
-      progress: { done: 0, total: 0 },
-      startTime: now,
-      lastUpdated: now
-    };
-
-    this.flows.set(flowId, newFlow);
-    this.notifyFlowUpdate(flowId);
-    return flowId;
+    return this.flowStateManager.createFlow(request);
   }
 
   /**
    * Get all flows as list items
    */
   public async getFlows(): Promise<FlowListItem[]> {
-    const flows = Array.from(this.flows.values());
-    return flows.map(flow => this.toFlowListItem(flow));
+    return this.flowStateManager.getAllFlowsAsListItems();
   }
 
   /**
    * Get a specific flow by ID
    */
   public async getFlow(flowId: string): Promise<Flow | null> {
-    const flow = this.flows.get(flowId);
-    return flow || null;
+    return this.flowStateManager.getFlow(flowId) || null;
   }
 
   /**
    * Update flow data
    */
   public async updateFlow(flowId: string, updates: Partial<Flow>): Promise<void> {
-    const flow = this.flows.get(flowId);
-    if (!flow) {
-      throw new Error(`Flow with ID ${flowId} not found`);
-    }
-
-    // Apply updates
-    Object.assign(flow, updates);
-    flow.lastUpdated = new Date().toISOString();
-
-    this.flows.set(flowId, flow);
-    this.notifyFlowUpdate(flowId);
+    this.flowStateManager.updateFlow(flowId, updates);
   }
 
   /**
    * Update flow title
    */
   public async updateFlowTitle(flowId: string, title: string): Promise<void> {
-    const flow = this.flows.get(flowId);
-    if (!flow) {
-      throw new Error(`Flow with ID ${flowId} not found`);
-    }
-
-    flow.title = title;
-    flow.lastUpdated = new Date().toISOString();
-
-    this.flows.set(flowId, flow);
-    this.notifyFlowUpdate(flowId);
+    this.flowStateManager.updateFlowTitle(flowId, title);
   }
 
   /**
    * Delete a flow
    */
   public async deleteFlow(flowId: string): Promise<void> {
-    this.flows.delete(flowId);
-    this.notifyFlowUpdate();
+    this.flowStateManager.deleteFlow(flowId);
   }
 
   /**
    * Update flow state
    */
   public async updateFlowState(flowId: string, state: FlowState): Promise<void> {
-    const flow = this.flows.get(flowId);
-    if (!flow) {
-      throw new Error(`Flow with ID ${flowId} not found`);
-    }
-
-    flow.state = state;
-    flow.lastUpdated = new Date().toISOString();
-
-    this.flows.set(flowId, flow);
-    this.notifyFlowUpdate(flowId);
+    this.flowStateManager.updateFlowState(flowId, state);
   }
 
   /**
    * Update flow progress
    */
   public async updateFlowProgress(flowId: string, progress: FlowProgress): Promise<void> {
-    const flow = this.flows.get(flowId);
-    if (!flow) {
-      throw new Error(`Flow with ID ${flowId} not found`);
-    }
-
-    flow.progress = progress;
-    flow.lastUpdated = new Date().toISOString();
-
-    this.flows.set(flowId, flow);
-    this.notifyFlowUpdate(flowId);
+    this.flowStateManager.updateFlowProgress(flowId, progress.done);
   }
 
   /**
    * Search flows by query
    */
   public async searchFlows(query: string): Promise<FlowListItem[]> {
-    const flows = Array.from(this.flows.values());
-    const filtered = flows.filter(flow =>
-      flow.title.toLowerCase().includes(query.toLowerCase()) ||
-      (flow.description && flow.description.toLowerCase().includes(query.toLowerCase()))
-    );
-    return filtered.map(flow => this.toFlowListItem(flow));
+    return this.flowStateManager.searchFlows(query);
   }
 
   /**
    * Get flows filtered by state
    */
   public async getFlowsByState(state: FlowState): Promise<FlowListItem[]> {
-    const flows = Array.from(this.flows.values());
-    const filtered = flows.filter(flow => flow.state === state);
-    return filtered.map(flow => this.toFlowListItem(flow));
+    return this.flowStateManager.getFlowsByStateAsListItems(state);
   }
 
   /**
@@ -534,41 +427,7 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
    * Subscribe to flow updates
    */
   public onFlowUpdate(listener: (flowId?: string) => void): () => void {
-    this.updateListeners.push(listener);
-    return () => {
-      const index = this.updateListeners.indexOf(listener);
-      if (index !== -1) {
-        this.updateListeners.splice(index, 1);
-      }
-    };
-  }
-
-  /**
-   * Notify all listeners of flow updates
-   */
-  private notifyFlowUpdate(flowId?: string): void {
-    // Notify local listeners
-    this.updateListeners.forEach(listener => listener(flowId));
-  }
-
-  /**
-   * Convert Flow to FlowListItem
-   */
-  private toFlowListItem(flow: Flow): FlowListItem {
-    return {
-      id: flow.id,
-      title: flow.title,
-      state: flow.state,
-      progress: flow.progress,
-      lastUpdated: flow.lastUpdated
-    };
-  }
-
-  /**
-   * Generate a unique ID
-   */
-  private generateId(): string {
-    return Math.random().toString(36).substr(2, 9);
+    return this.flowStateManager.onFlowUpdate(listener);
   }
 
   /**
