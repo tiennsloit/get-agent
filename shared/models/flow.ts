@@ -58,6 +58,29 @@ export interface ExecutionReport {
 }
 
 /**
+ * Chat message for design exploration
+ */
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string | any;
+  type?: 'analysis' | 'log' | 'thought' | 'loading';
+  id?: string;
+  metadata?: any;
+}
+
+/**
+ * Design data for flow detail persistence
+ */
+export interface FlowDesignData {
+  blueprint?: string;
+  messages?: ChatMessage[];
+  analysisContext?: any;
+  explorationHistory?: any[]; // ExplorationHistory from flowAnalysisTypes
+  cumulativeKnowledge?: any; // CumulativeKnowledge from flowAnalysisTypes
+  explorerContext?: any; // ExplorerContext from designStore
+}
+
+/**
  * Main Flow interface
  */
 export interface Flow {
@@ -71,6 +94,7 @@ export interface Flow {
   startTime: string;
   lastUpdated: string;
   executionReport?: ExecutionReport;
+  designData?: FlowDesignData;
 }
 
 /**

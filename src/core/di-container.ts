@@ -49,7 +49,11 @@ export class DiContainer {
       .bind<FlowStateManager>(INJECTION_KEYS.FLOW_STATE_MANAGER)
       .toDynamicValue((context) => {
         const vsCodeContext = context.get<vscode.ExtensionContext>(INJECTION_KEYS.CONTEXT);
-        return FlowStateManager.getInstance(vsCodeContext);
+        const instance = FlowStateManager.getInstance(vsCodeContext);
+        if (!instance) {
+          throw new Error('Failed to initialize FlowStateManager');
+        }
+        return instance;
       })
       .inSingletonScope();
     this._container

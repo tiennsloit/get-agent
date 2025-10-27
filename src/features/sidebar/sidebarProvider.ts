@@ -23,6 +23,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     // Detect development mode
     this._isDevelopment = process.env.VSCODE_DEBUG_MODE === 'true' || process.env.NODE_ENV === 'development';
     
+    // Validate that flowStateManager is properly initialized
+    if (!this.flowStateManager) {
+      throw new Error('FlowStateManager is not properly injected');
+    }
+    
     // Initialize message handler
     this.messageHandler = new SidebarMessageHandler({
       context: this.context,

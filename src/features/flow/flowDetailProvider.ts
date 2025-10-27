@@ -10,6 +10,7 @@ import { getWebviewContent } from '../../core/utilities/getWebviewContent';
 import { DiContainer } from '../../core/di-container';
 import { INJECTION_KEYS } from '../../core/constants/injectionKeys';
 import type { FlowAnalysisResponse, ExplorerResponse, ActionResult, ExplorationHistory, CumulativeKnowledge } from '../../types/flowAnalysisTypes';
+import type { FlowDesignData } from '../../../shared/models/flow';
 import { ContextManager } from '../../managers/context/contextManager';
 
 export class FlowDetailProvider {
@@ -116,6 +117,10 @@ export class FlowDetailProvider {
 
           case 'generateBlueprintFromExploration':
             await this.handleGenerateBlueprintFromExploration(message.data);
+            break;
+
+          case 'saveDesignData':
+            await this.handleSaveDesignData(message.data);
             break;
 
           default:
@@ -343,6 +348,31 @@ export class FlowDetailProvider {
   }
 
   /**
+   * Handle save design data request from webview
+   */
+  private async handleSaveDesignData(data: { flowId: string; updates: Partial<FlowDesignData> }): Promise<void> {
+    try {
+      console.log(`[FlowDetailProvider] Saving design data for flow ${data.flowId}`, {
+        hasBlueprint: !!data.updates.blueprint,
+        hasMessages: !!data.updates.messages,
+        hasAnalysisContext: !!data.updates.analysisContext
+      });
+
+      await this.flowService.updateFlowDesignData(data.flowId, data.updates);
+
+      console.log('[FlowDetailProvider] Design data saved successfully');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[FlowDetailProvider] Failed to save design data:', error);
+
+      this.panel?.webview.postMessage({
+        command: 'saveDesignDataError',
+        data: { error: errorMessage }
+      });
+    }
+  }
+
+  /**
    * Handle stop exploration request
    */
   private handleStopExploration(data: { flowId: string }): void {
@@ -352,7 +382,7 @@ export class FlowDetailProvider {
   }
 
   /**
-   * Send flow data to webview
+   * Send flow data to webview with current step
    */
   private async sendFlowData(): Promise<void> {
     if (!this.panel) { return; }
@@ -368,9 +398,25 @@ export class FlowDetailProvider {
       return;
     }
 
+    // Calculate current step based on flow state
+    let currentStep = 1; // Default to Design page
+    
+    if (flow.state === 'executing' || flow.state === 'paused') {
+      currentStep = 2; // Execute page
+    } else if (flow.state === 'reporting' || flow.state === 'completed' || flow.state === 'cancelled') {
+      currentStep = 3; // Report page
+    }
+
+    console.log(`[FlowDetailProvider] Sending flow data`, {
+      flowId: flow.id,
+      state: flow.state,
+      currentStep,
+      hasDesignData: !!flow.designData
+    });
+
     this.panel.webview.postMessage({
       command: 'flowDataUpdate',
-      data: { flow }
+      data: { flow, currentStep }
     });
   }
 

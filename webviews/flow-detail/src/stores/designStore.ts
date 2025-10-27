@@ -7,6 +7,7 @@ import type {
     ExplorationHistory,
     CumulativeKnowledge
 } from '@/types/explorerTypes';
+import { useFlowStore } from './flowStore';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -75,6 +76,14 @@ export const useDesignStore = defineStore('design', {
 
     actions: {
         /**
+         * Get current flow ID from flow store
+         */
+        getCurrentFlowId(): string {
+            const flowStore = useFlowStore();
+            return flowStore.currentFlow?.id || 'flow-123';
+        },
+
+        /**
          * Aggregate knowledge from current response into cumulative knowledge
          */
         aggregateKnowledge(response: ExplorerResponse) {
@@ -116,7 +125,13 @@ export const useDesignStore = defineStore('design', {
          * Initialize the store - set up message listener
          */
         initialize() {
+            console.log('[DesignStore] Initializing - setting up message listener');
             this.setupMessageListener();
+            // Request initial flow data from extension after listener is ready
+            console.log('[DesignStore] Requesting flow data');
+            vscode.postMessage({
+                command: 'getFlowData'
+            });
         },
 
         /**
@@ -160,7 +175,7 @@ export const useDesignStore = defineStore('design', {
         /**
          * Add a user message and send to extension
          */
-        sendUserMessage(message: string, flowId: string = 'flow-123') {
+        sendUserMessage(message: string, flowId: string = 'flow-123', currentFlowState?: string) {
             // Validate input
             if (!message || !message.trim()) {
                 console.warn('Cannot send empty message');
@@ -170,6 +185,19 @@ export const useDesignStore = defineStore('design', {
             if (this.isAnalyzing) {
                 console.warn('Already analyzing, please wait');
                 return;
+            }
+
+            // Check if this is the first user message and flow is in TODO state
+            const isFirstUserMessage = this.messages.filter(msg => msg.role === 'user').length === 0;
+            if (isFirstUserMessage && currentFlowState === 'to-do') {
+                console.log('[DesignStore] First user message detected, transitioning flow state to DESIGNING');
+                // Send state transition command before analysis
+                vscode.postMessage({
+                    command: 'updateFlowState',
+                    data: {
+                        state: 'designing'
+                    }
+                });
             }
 
             // Add user message to chat
@@ -251,6 +279,9 @@ export const useDesignStore = defineStore('design', {
 
             this.isAnalyzing = false;
 
+            // Sync analysis context to extension storage
+            this.syncDesignData(this.getCurrentFlowId());
+
             // Start exploration loop after analysis
             if (analysis?.core_requirement?.main_objective) {
                 this.startExplorationLoop(analysis.core_requirement.main_objective);
@@ -260,7 +291,9 @@ export const useDesignStore = defineStore('design', {
         /**
          * Start the exploration loop
          */
-        startExplorationLoop(implementationGoal: string, flowId: string = 'flow-123') {
+        startExplorationLoop(implementationGoal: string, flowId?: string) {
+            const actualFlowId = flowId || this.getCurrentFlowId();
+            
             // Validate input
             if (!implementationGoal || !implementationGoal.trim()) {
                 console.warn('Cannot start exploration with empty goal');
@@ -290,13 +323,15 @@ export const useDesignStore = defineStore('design', {
             this.exploredTargets = new Set<string>();
 
             // Start first iteration
-            this.runExplorationIteration(flowId);
+            this.runExplorationIteration(actualFlowId);
         },
 
         /**
          * Run a single exploration iteration
          */
-        runExplorationIteration(flowId: string = 'flow-123') {
+        runExplorationIteration(flowId?: string) {
+            const actualFlowId = flowId || this.getCurrentFlowId();
+            
             if (!this.explorerContext.isExploring) {
                 return;
             }
@@ -324,7 +359,7 @@ export const useDesignStore = defineStore('design', {
             // Use 'history' field instead of 'explorationHistory' (while keeping legacy for now)
             try {
                 let clonedData = JSON.parse(JSON.stringify({
-                    flowId,
+                    flowId: actualFlowId,
                     implementationGoal: this.explorerContext.implementationGoal,
                     // New format: use 'history' field with observations embedded
                     history: this.explorationHistory,
@@ -346,7 +381,9 @@ export const useDesignStore = defineStore('design', {
         /**
          * Handle explorer response from extension
          */
-        handleExplorerResponse(response: ExplorerResponse, flowId: string = 'flow-123') {
+        handleExplorerResponse(response: ExplorerResponse, flowId?: string) {
+            const actualFlowId = flowId || this.getCurrentFlowId();
+            
             // Remove loading message
             this.removeLoadingMessages();
 
@@ -433,7 +470,7 @@ export const useDesignStore = defineStore('design', {
                         type: 'log',
                         content: 'Starting blueprint generation...'
                     });
-                    this.requestBlueprintGeneration(flowId);
+                    this.requestBlueprintGeneration(actualFlowId);
                 } else {
                     this.addMessage({
                         role: 'assistant',
@@ -442,18 +479,23 @@ export const useDesignStore = defineStore('design', {
                     });
                 }
 
+                // Sync messages and exploration history to extension storage
+                this.syncDesignData(actualFlowId);
+
                 this.stopExploration();
                 return;
             }
 
             // Execute the action
-            this.executeAction(response.action, response.iteration, flowId);
+            this.executeAction(response.action, response.iteration, actualFlowId);
         },
 
         /**
          * Execute an action from the explorer
          */
-        executeAction(action: any, iteration: number, flowId: string = 'flow-123') {
+        executeAction(action: any, iteration: number, flowId?: string) {
+            const actualFlowId = flowId || this.getCurrentFlowId();
+            
             // Add log message about the action
             this.addMessage({
                 role: 'assistant',
@@ -465,7 +507,7 @@ export const useDesignStore = defineStore('design', {
             vscode.postMessage({
                 command: 'performAction',
                 data: {
-                    flowId,
+                    flowId: actualFlowId,
                     action,
                     iteration
                 }
@@ -475,7 +517,9 @@ export const useDesignStore = defineStore('design', {
         /**
          * Handle action result from extension
          */
-        handleActionResult(result: ActionResult, flowId: string = 'flow-123') {
+        handleActionResult(result: ActionResult, flowId?: string) {
+            const actualFlowId = flowId || this.getCurrentFlowId();
+            
             if (result.success) {
                 // Store observation in the last history entry
                 if (this.explorationHistory.length > 0) {
@@ -514,18 +558,23 @@ export const useDesignStore = defineStore('design', {
                 });
             }
 
+            // Save exploration progress after each action
+            this.syncDesignData(actualFlowId);
+
             // Continue to next iteration
-            this.runExplorationIteration(flowId);
+            this.runExplorationIteration(actualFlowId);
         },
 
         /**
          * Request blueprint generation from extension
          */
-        requestBlueprintGeneration(flowId: string = 'flow-123') {
+        requestBlueprintGeneration(flowId?: string) {
+            const actualFlowId = flowId || this.getCurrentFlowId();
+            
             this.blueprintGenerating = true;
             this.blueprint = ''; // Clear any existing blueprint
             const clonedData = JSON.parse(JSON.stringify({
-                flowId,
+                flowId: actualFlowId,
                 implementationGoal: this.explorerContext.implementationGoal,
                 explorationHistory: this.explorationHistory,
                 cumulativeKnowledge: this.cumulativeKnowledge,
@@ -551,11 +600,15 @@ export const useDesignStore = defineStore('design', {
         handleBlueprintComplete() {
             this.blueprintGenerating = false;
             this.blueprintReady = true;
+            this.editableContent = this.blueprint;
             this.addMessage({
                 role: 'assistant',
                 type: 'log',
                 content: 'Blueprint generation complete!'
             });
+
+            // Sync blueprint to extension storage
+            this.syncDesignData(this.getCurrentFlowId());
         },
 
         /**
@@ -595,9 +648,11 @@ export const useDesignStore = defineStore('design', {
          * Set up message listener for extension communication
          */
         setupMessageListener() {
+            console.log('[DesignStore] Setting up message listener');
             // Create the handler function
             this.messageHandler = (event: MessageEvent) => {
                 const message = event.data;
+                console.log('[DesignStore] Received message:', message.command);
                 switch (message.command) {
                     case 'analyzeUserResponse':
                         this.handleAnalysisResponse(message.data.analysis);
@@ -619,6 +674,9 @@ export const useDesignStore = defineStore('design', {
                         break;
                     case 'blueprintError':
                         this.handleBlueprintError(message.data.error);
+                        break;
+                    case 'flowDataUpdate':
+                        this.handleFlowDataUpdate(message.data);
                         break;
                 }
             };
@@ -674,6 +732,167 @@ export const useDesignStore = defineStore('design', {
             };
             this.exploredTargets = new Set<string>();
             this.analysisContext = null;
+        },
+
+        /**
+         * Sync design data to extension storage (throttled)
+         */
+        syncDesignData(flowId: string = 'flow-123') {
+            const updates: any = {};
+
+            // Include blueprint if ready
+            if (this.blueprintReady && this.blueprint) {
+                updates.blueprint = this.blueprint;
+            }
+
+            // Include messages if any exist
+            if (this.messages.length > 0) {
+                updates.messages = this.messages;
+            }
+
+            // Include analysis context if available
+            if (this.analysisContext) {
+                updates.analysisContext = this.analysisContext;
+            }
+
+            // Include exploration history if exists
+            if (this.explorationHistory.length > 0) {
+                updates.explorationHistory = this.explorationHistory;
+            }
+
+            // Include cumulative knowledge if exists
+            if (this.cumulativeKnowledge.confirmed.length > 0 || 
+                this.cumulativeKnowledge.assumptions.length > 0 || 
+                this.cumulativeKnowledge.unknowns.length > 0) {
+                updates.cumulativeKnowledge = this.cumulativeKnowledge;
+            }
+
+            // Include explorer context if exploring or has data
+            if (this.explorerContext.implementationGoal || this.explorerContext.observations.length > 0) {
+                updates.explorerContext = this.explorerContext;
+            }
+
+            // Only send if there's something to update
+            if (Object.keys(updates).length === 0) {
+                return;
+            }
+
+            console.log('[DesignStore] Syncing design data to extension', {
+                hasBlueprint: !!updates.blueprint,
+                messageCount: updates.messages?.length ?? 0,
+                hasAnalysisContext: !!updates.analysisContext,
+                explorationHistoryCount: updates.explorationHistory?.length ?? 0,
+                hasKnowledge: !!updates.cumulativeKnowledge,
+                hasExplorerContext: !!updates.explorerContext
+            });
+
+            vscode.postMessage({
+                command: 'saveDesignData',
+                data: {
+                    flowId,
+                    updates: JSON.parse(JSON.stringify(updates))
+                }
+            });
+        },
+
+        /**
+         * Restore design data from flow object
+         */
+        restoreFromFlowData(designData: any) {
+            if (!designData) {
+                console.log('[DesignStore] No design data to restore');
+                return;
+            }
+
+            console.log('[DesignStore] Restoring design data', {
+                hasBlueprint: !!designData.blueprint,
+                messageCount: designData.messages?.length ?? 0,
+                hasAnalysisContext: !!designData.analysisContext,
+                explorationHistoryCount: designData.explorationHistory?.length ?? 0,
+                hasKnowledge: !!designData.cumulativeKnowledge,
+                hasExplorerContext: !!designData.explorerContext
+            });
+
+            try {
+                // Restore blueprint with validation
+                if (designData.blueprint && typeof designData.blueprint === 'string') {
+                    this.blueprint = designData.blueprint;
+                    this.blueprintReady = true;
+                    console.log('[DesignStore] Blueprint restored successfully');
+                }
+
+                // Restore messages with validation
+                if (designData.messages && Array.isArray(designData.messages)) {
+                    this.messages = designData.messages;
+                    console.log(`[DesignStore] Restored ${designData.messages.length} messages`);
+                }
+
+                // Restore analysis context with validation
+                if (designData.analysisContext) {
+                    this.analysisContext = designData.analysisContext;
+                    console.log('[DesignStore] Analysis context restored');
+                }
+
+                // Restore exploration history with validation
+                if (designData.explorationHistory && Array.isArray(designData.explorationHistory)) {
+                    this.explorationHistory = designData.explorationHistory;
+                    console.log(`[DesignStore] Restored ${designData.explorationHistory.length} exploration iterations`);
+                }
+
+                // Restore cumulative knowledge with validation
+                if (designData.cumulativeKnowledge) {
+                    this.cumulativeKnowledge = designData.cumulativeKnowledge;
+                    console.log('[DesignStore] Cumulative knowledge restored', {
+                        confirmedCount: this.cumulativeKnowledge.confirmed.length,
+                        assumptionsCount: this.cumulativeKnowledge.assumptions.length,
+                        unknownsCount: this.cumulativeKnowledge.unknowns.length
+                    });
+                }
+
+                // Restore explorer context with validation
+                if (designData.explorerContext) {
+                    // Restore explorer context but mark exploration as NOT active
+                    this.explorerContext = {
+                        ...designData.explorerContext,
+                        isExploring: false // Never restore as active
+                    };
+                    console.log('[DesignStore] Explorer context restored', {
+                        implementationGoal: this.explorerContext.implementationGoal,
+                        iterations: this.explorerContext.currentIteration
+                    });
+                }
+
+                console.log('[DesignStore] Design data restoration complete');
+            } catch (error) {
+                console.error('[DesignStore] Error restoring design data:', error);
+                // Don't crash the application - gracefully handle errors
+            }
+        },
+
+        /**
+         * Handle flow data update from extension
+         */
+        handleFlowDataUpdate(data: any) {
+            console.log('[DesignStore] Received flow data update', {
+                hasFlow: !!data.flow,
+                flowId: data.flow?.id,
+                flowState: data.flow?.state,
+                hasDesignData: !!data.flow?.designData
+            });
+
+            // Validate that we received flow data
+            if (!data.flow) {
+                console.warn('[DesignStore] No flow data in update message');
+                return;
+            }
+
+            // Restore design data if available
+            if (data.flow.designData) {
+                console.log('[DesignStore] Design data found, restoring...');
+                this.restoreFromFlowData(data.flow.designData);
+            } else {
+                console.log('[DesignStore] No design data to restore');
+            }
         }
     }
 });

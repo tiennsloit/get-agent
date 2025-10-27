@@ -25,11 +25,11 @@
             <div class="w-64 mt-4">
               <div class="flex justify-between text-xs text-gray-400 mb-1">
                 <span>Progress: </span>
-                <span>{{ currentIteration }}%</span>
+                <span>{{ progressPercentage }}%</span>
               </div>
               <div class="w-full bg-gray-700 rounded-full h-2">
                 <div class="bg-blue-400 h-2 rounded-full transition-all duration-300"
-                  :style="{ width: `${(currentIteration / 20) * 100}%` }"></div>
+                  :style="{ width: `${progressPercentage}%` }"></div>
               </div>
             </div>
           </div>
@@ -107,19 +107,21 @@ import CloseSolidIcon from '@/components/icons/CloseSolidIcon.vue';
 import ChatMessagesContainer from '@/components/chat/ChatMessagesContainer.vue';
 import ChatInput from '@/components/chat/ChatInput.vue';
 import { useDesignStore } from '@/stores/designStore';
+import { useFlowStore } from '@/stores/flowStore';
 
 const designStore = useDesignStore();
+const flowStore = useFlowStore();
 
 // Computed properties from store
 const messages = computed(() => designStore.messages);
 const isAnalyzing = computed(() => designStore.isAnalyzing);
 const isExploring = computed(() => designStore.explorerContext.isExploring);
 const currentIteration = computed(() => designStore.explorerContext.currentIteration);
-const maxIterations = computed(() => designStore.explorerContext.maxIterations);
 const blueprint = computed(() => designStore.blueprint);
 const isEditing = computed(() => designStore.isEditing);
 const blueprintGenerating = computed(() => designStore.blueprintGenerating);
 const blueprintReady = computed(() => designStore.blueprintReady);
+const progressPercentage = computed(() => ((currentIteration.value / 20) * 100).toFixed(0));
 
 // Use v-model for editable content
 const editableContent = computed({
@@ -159,7 +161,9 @@ const saveChanges = () => {
 };
 
 const handleUserMessage = (message: string) => {
-  designStore.sendUserMessage(message);
+  const flowId = flowStore.currentFlow?.id || 'flow-123';
+  const flowState = flowStore.currentFlow?.state;
+  designStore.sendUserMessage(message, flowId, flowState);
 };
 
 const handleStopExploration = () => {

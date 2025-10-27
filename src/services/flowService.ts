@@ -2,7 +2,8 @@ import type {
   Flow,
   CreateFlowRequest,
   FlowListItem,
-  FlowProgress
+  FlowProgress,
+  FlowDesignData
 } from '../../shared/models/flow';
 import { FlowState } from '../../shared/models/flow';
 import type {
@@ -42,6 +43,7 @@ export interface IFlowService {
   // State Management
   updateFlowState(flowId: string, state: FlowState): Promise<void>;
   updateFlowProgress(flowId: string, progress: FlowProgress): Promise<void>;
+  updateFlowDesignData(flowId: string, updates: Partial<FlowDesignData>): Promise<void>;
 
   // Search & Filter
   searchFlows(query: string): Promise<FlowListItem[]>;
@@ -141,6 +143,13 @@ export class FlowService implements IFlowService {
    */
   public async updateFlowProgress(flowId: string, progress: FlowProgress): Promise<void> {
     this.flowStateManager.updateFlowProgress(flowId, progress.done);
+  }
+
+  /**
+   * Update flow design data
+   */
+  public async updateFlowDesignData(flowId: string, updates: Partial<FlowDesignData>): Promise<void> {
+    this.flowStateManager.updateFlowDesignData(flowId, updates);
   }
 
   /**
@@ -427,7 +436,13 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
    * Subscribe to flow updates
    */
   public onFlowUpdate(listener: (flowId?: string) => void): () => void {
-    return this.flowStateManager.onFlowUpdate(listener);
+    if (this.flowStateManager && typeof this.flowStateManager.onFlowUpdate === 'function') {
+      return this.flowStateManager.onFlowUpdate(listener);
+    } else {
+      console.error('[FlowService] flowStateManager is not properly initialized', this.flowStateManager);
+      // Return a no-op unsubscribe function
+      return () => {};
+    }
   }
 
   /**

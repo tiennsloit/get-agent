@@ -41,9 +41,13 @@ export class SidebarMessageHandler {
     this.webview = webview;
     
     // Subscribe to flow state changes
-    this.unsubscribeFlowUpdates = this.flowStateManager.onFlowUpdate(() => {
-      this.syncFlowList();
-    });
+    if (this.flowStateManager && typeof this.flowStateManager.onFlowUpdate === 'function') {
+      this.unsubscribeFlowUpdates = this.flowStateManager.onFlowUpdate(() => {
+        this.syncFlowList();
+      });
+    } else {
+      console.error('[SidebarMessageHandler] flowStateManager is not properly initialized', this.flowStateManager);
+    }
   }
 
   /**

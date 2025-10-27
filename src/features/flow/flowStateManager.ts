@@ -8,7 +8,8 @@ import type {
   CreateFlowRequest, 
   Task, 
   ExecutionReport,
-  FlowListItem 
+  FlowListItem,
+  FlowDesignData
 } from '../../../shared/models/flow';
 import { FlowState } from '../../../shared/models/flow';
 import { generateId } from '../../core/utilities/generateId';
@@ -25,7 +26,10 @@ export class FlowStateManager {
   }
 
   public static getInstance(context?: vscode.ExtensionContext): FlowStateManager {
-    if (!FlowStateManager.instance && context) {
+    if (!FlowStateManager.instance) {
+      if (!context) {
+        throw new Error('FlowStateManager requires a context for initialization');
+      }
       FlowStateManager.instance = new FlowStateManager(context);
     }
     return FlowStateManager.instance;
@@ -161,6 +165,30 @@ export class FlowStateManager {
       flow.blueprint = blueprint;
       flow.tasks = tasks;
       flow.progress.total = tasks.length;
+      flow.lastUpdated = new Date().toISOString();
+      this.flows.set(flowId, flow);
+      this.saveFlowsToStorage();
+      this.notifyFlowUpdate(flowId);
+    }
+  }
+
+  /**
+   * Update flow design data with partial updates
+   */
+  public updateFlowDesignData(flowId: string, updates: Partial<FlowDesignData>): void {
+    const flow = this.flows.get(flowId);
+    if (flow) {
+      // Initialize designData if it doesn't exist
+      if (!flow.designData) {
+        flow.designData = {};
+      }
+      
+      // Merge updates into existing designData
+      flow.designData = {
+        ...flow.designData,
+        ...updates
+      };
+      
       flow.lastUpdated = new Date().toISOString();
       this.flows.set(flowId, flow);
       this.saveFlowsToStorage();

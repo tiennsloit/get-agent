@@ -13,6 +13,7 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue';
 import { useFlowStore } from './stores/flowStore';
 import FlowStepper from './components/FlowStepper.vue';
 import DesignPage from './pages/DesignPage.vue';
@@ -25,4 +26,12 @@ const flowStore = useFlowStore();
 const handleStepChange = (step: number) => {
   flowStore.setCurrentStep(step);
 };
+
+onMounted(() => {
+  flowStore.initialize();
+});
+
+onUnmounted(() => {
+  flowStore.cleanup();
+});
 </script>

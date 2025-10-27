@@ -13,16 +13,16 @@
         <template v-else>
           <LoadingMessage v-if="message.type === 'loading'" />
           <LogStep v-else-if="message.type === 'log'">{{ message.content }}</LogStep>
-          <ThoughtStep v-else-if="message.type === 'thought'">
+          <ThoughtStep v-else-if="message.type === 'thought'" class="text-xs">
             {{ message.content }}
             <!-- Show progress after thought -->
-            <ExplorationProgress 
+            <!-- <ExplorationProgress 
               v-if="message.metadata?.explorerResponse"
               :understanding-level="message.metadata.explorerResponse.understanding_level"
               :confidence-score="message.metadata.explorerResponse.confidence_score"
               :iteration="message.metadata.explorerResponse.iteration"
               :next-priorities="message.metadata.explorerResponse.next_priorities"
-            />
+            /> -->
           </ThoughtStep>
           <AnalysisResult v-else :analysis="message.content" />
         </template>
