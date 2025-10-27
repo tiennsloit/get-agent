@@ -30,10 +30,11 @@ High-level analysis of the existing system architecture discovered during explor
 \`\`\`mermaid
 flowchart TD
     %% Use valid Mermaid syntax only, e.g.:
-    A[Component A] --> B[Component B]
-    B --> C[Component C]
-    subgraph Subsystem
-        D[Component D]
+    A["Frontend App"] --> B["API Gateway"]
+    B --> C["Auth Service"]
+    subgraph "Core Services"
+        C
+        D["Data Processor"]
     end
 \`\`\`
 
@@ -41,10 +42,13 @@ flowchart TD
 \`\`\`mermaid
 sequenceDiagram
     %% Use valid Mermaid syntax only, e.g.:
-    participant User
-    participant System
-    User->>System: Request Data
-    System-->>User: Response Data
+    participant User as "End User"
+    participant FE as "Frontend"
+    participant BE as "Backend API"
+    User->>FE: Submit Form
+    FE->>BE: POST /submit
+    BE-->>FE: 200 OK
+    FE-->>User: Success Message
 \`\`\`
 
 ## Implementation Plan
@@ -73,8 +77,8 @@ For key services/components (adapt based on project needs):
 \`\`\`mermaid
 classDiagram
     %% Use valid Mermaid syntax only, e.g.:
-    ClassA --|> ClassB : Inheritance
-    ClassA --> ClassC : Association
+    AuthService --|> BaseAuth : Inheritance
+    AuthService --> UserRepository : Uses
 \`\`\`
 
 **Implementation Details**:
@@ -135,7 +139,13 @@ classDiagram
 - **Brevity**: Keep details at blueprint level; avoid deep code implementations
 - **Actionability**: Provide high-level, actionable tasks and specs
 - **Specificity**: Reference discovered patterns, files, and functions where appropriate
-- **Mermaid Validity**: Ensure all Mermaid diagrams use correct syntax that renders properly (test mentally: no unbalanced elements, proper keywords like flowchart TD, sequenceDiagram, classDiagram)`;
+- **Mermaid Validity**: Ensure all Mermaid diagrams use correct syntax that renders properly. Follow these strict rules:
+  - Node IDs must contain only alphanumeric characters and underscores (e.g., \`AuthService\`, \`User_Input\`).
+  - Any label containing spaces, parentheses, commas, or special characters **must be wrapped in double quotes** (e.g., \`A["User (Admin)"]\`).
+  - Never use raw \`(\`, \`)\`, \`[\`, \`]\`, \`{\`, \`}\`, \`<\`, \`>\`, \`:\`, \`;\`, \`\\\`, or unescaped quotes in unquoted labels.
+  - Prefer simplified, clean labels when possible (e.g., "Legacy Handler" instead of "Handler (v2, deprecated)").
+  - Validate diagram structure mentally: balanced subgraphs, declared participants, proper arrow syntax (\`-->\`, \`->>\`, \`--|>\`, etc.).
+  - Diagrams must render correctly in standard Mermaid environments (GitHub, VS Code, Mermaid Live Editor).`;
 
 export const assistantPrompt = `### INTERNAL REASONING PROTOCOL
 
@@ -167,10 +177,17 @@ export const assistantPrompt = `### INTERNAL REASONING PROTOCOL
 - Design error handling and analytics at high level
 
 [STEP 5: DIAGRAM CREATION]
-- Create strictly valid Mermaid diagrams for architecture flows (validate syntax: use proper directives like flowchart TD for flowcharts, sequenceDiagram for sequences, classDiagram for classes; ensure balanced connections)
-- Design component interaction flowcharts
-- Map data flow sequences
-- Illustrate class relationships where needed
+- Create strictly valid Mermaid diagrams for architecture flows.
+- **Sanitize all node names and labels**:
+  - Use only alphanumeric characters and underscores for node IDs (e.g., \`Payment_Service\`).
+  - Wrap any label containing spaces, parentheses, commas, or special symbols in **double quotes** (e.g., \`A["Handle (Legacy) Flow"]\`).
+  - Never include raw \`(\`, \`)\`, \`[\`, \`]\`, \`{\`, \`}\`, \`<\`, \`>\`, \`:\`, \`;\`, \`\\\`, or unescaped quotes in unquoted text.
+  - If a concept contains problematic characters, rephrase it (e.g., "Config Parser v2" → "Config_Parser_V2" or "Config Parser V2" in quotes).
+- Validate diagram types:
+  - \`flowchart TD\`: use \`-->\` or \`--|>\` for connections; declare subgraphs with quoted titles if needed.
+  - \`sequenceDiagram\`: declare all \`participant\`s before use; use \`->>\` and \`-->>\` for messages.
+  - \`classDiagram\`: use valid relationship syntax (\`--|>\`, \`-->\`, \`..\`, etc.).
+- Ensure every diagram is self-contained and syntactically correct.
 
 [STEP 6: BLUEPRINT ASSEMBLY]
 - Organize elements into coherent markdown structure, starting directly with the # header
