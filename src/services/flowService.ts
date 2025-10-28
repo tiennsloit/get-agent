@@ -56,6 +56,9 @@ export interface IFlowService {
   // User Request Analysis
   analyzeUserRequest(userRequest: string): Promise<FlowAnalysisResponse>;
 
+  // Flow Title Generation
+  generateFlowTitle(userRequest: string): Promise<string>;
+
   // Code Exploration
   exploreCode(
     implementationGoal: string,
@@ -251,6 +254,51 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
     }
 
     return { subtasks: mockSubtasks };
+  }
+
+  /**
+   * Generate flow title based on user request using real API
+   */
+  public async generateFlowTitle(userRequest: string): Promise<string> {
+    try {
+      // Validate input
+      if (!userRequest || userRequest.trim().length === 0) {
+        throw new Error('User request cannot be empty');
+      }
+
+      // Build API request payload
+      const requestPayload = {
+        userRequest: userRequest.trim()
+      };
+
+      // Call API
+      const response = await this.apiClient.post<{ title: string }>(
+        'flow/title',
+        requestPayload
+      );
+
+      return response.title;
+    } catch (error) {
+      // Handle API errors with user-friendly messages
+      if (error instanceof ApiError) {
+        if (error.statusCode === 400) {
+          throw new Error(`Invalid request: ${error.message}`);
+        } else if (error.statusCode && error.statusCode >= 500) {
+          throw new Error('Server error. Please try again later.');
+        } else if (error.message.includes('timeout')) {
+          throw new Error('Request timeout. Please check your connection and try again.');
+        } else {
+          throw new Error(`API error: ${error.message}`);
+        }
+      }
+
+      // Re-throw other errors
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error('An unexpected error occurred during title generation');
+    }
   }
 
   /**

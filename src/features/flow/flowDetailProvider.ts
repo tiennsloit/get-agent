@@ -103,6 +103,10 @@ export class FlowDetailProvider {
             await this.handleAnalyzeUserRequest(message.data);
             break;
 
+          case 'generateFlowTitle':
+            await this.handleGenerateFlowTitle(message.data);
+            break;
+
           case 'exploreCode':
             await this.handleExploreCode(message.data);
             break;
@@ -152,6 +156,33 @@ export class FlowDetailProvider {
       });
 
       console.error('Error analyzing user request:', error);
+    }
+  }
+
+  /**
+   * Handle flow title generation
+   */
+  private async handleGenerateFlowTitle(data: { flowId: string; userRequest: string }): Promise<void> {
+    try {
+      console.log(`[FlowDetailProvider] Generating title for flow ${data.flowId}`);
+      
+      const title = await this.flowService.generateFlowTitle(data.userRequest);
+
+      console.log(`[FlowDetailProvider] Generated title: "${title}"`);
+
+      // Update flow title in the service
+      await this.flowService.updateFlowTitle(data.flowId, title);
+
+      // Update the panel title
+      this.updateTitle(title);
+
+      console.log(`[FlowDetailProvider] Flow title updated successfully`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[FlowDetailProvider] Error generating flow title:', error);
+
+      // Don't show error to user, just log it
+      // Title generation is a non-critical feature
     }
   }
 

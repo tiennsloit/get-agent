@@ -198,6 +198,16 @@ export const useDesignStore = defineStore('design', {
                         state: 'designing'
                     }
                 });
+
+                // Generate title in parallel with analysis for first message
+                console.log('[DesignStore] Triggering title generation in parallel');
+                vscode.postMessage({
+                    command: 'generateFlowTitle',
+                    data: {
+                        flowId,
+                        userRequest: message.trim()
+                    }
+                });
             }
 
             // Add user message to chat
