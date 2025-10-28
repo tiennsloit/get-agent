@@ -49,7 +49,7 @@
       </VueMarkdown>
 
       <textarea v-else="isEditing" v-model="editableContent"
-        class="w-full h-full min-h-[400px] p-2 bg-black/30 rounded border border-gray-500/50 font-mono text-sm"></textarea>
+        class="w-full h-full min-h-[400px] p-2 font-mono text-xs"></textarea>
 
       <!-- Empty state -->
       <div v-if="!blueprint && !isAnalyzing && !isExploring && !blueprintGenerating"
@@ -60,28 +60,26 @@
         </div>
       </div>
 
-      <div v-if="blueprintReady"
-        class="absolute bg-black text-md font-semibold top-20 right-10 flex rounded-full border border-white/50 overflow-hidden">
+      <div v-if="blueprintReady" class="absolute top-20 right-10 flex space-x-2 overflow-hidden text-md font-semibold">
         <button v-if="!isEditing" @click="startEditing"
-          class="px-3 py-1.5 rounded-l-full cursor-pointer hover:bg-white/20 transition-colors flex space-x-2 items-center">
+          class="px-3 py-1.5 rounded-full border border-white/20 cursor-pointer backdrop-blur-xs bg-white/10 hover:bg-white/20 transition-all duration-300 flex space-x-1 items-center shadow-lg">
           <EditSolidIcon />
           <span>Edit</span>
         </button>
         <button v-if="!isEditing"
-          class="px-3 py-1.5 bg-green-500/50 rounded-r-full cursor-pointer hover:bg-green-500/70 transition-colors flex space-x-2 items-center">
+          class="px-3 py-1.5 bg-green-500/20 backdrop-blur-xs rounded-full border border-green-400/30 cursor-pointer hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 flex space-x-1 items-center shadow-lg">
           <PlaySolidIcon class="text-lg" />
           <span>Start</span>
         </button>
 
         <template v-else>
           <button @click="cancelEditing"
-            class="px-3 py-1.5 rounded-l-full cursor-pointer hover:bg-white/20 transition-colors flex space-x-2 items-center">
+            class="px-3 py-1.5 rounded-full border border-white/20 cursor-pointer backdrop-blur-xs bg-white/10 hover:bg-white/20 transition-all duration-300 flex space-x-1 items-center shadow-lg">
             <CloseSolidIcon />
             <span>Cancel</span>
           </button>
-          <div class="w-px bg-white/50"></div>
           <button @click="saveChanges"
-            class="px-3 py-1.5 bg-green-500/50 rounded-r-full cursor-pointer hover:bg-green-500/70 transition-colors flex space-x-2 items-center">
+            class="px-3 py-1.5 bg-green-500/20 backdrop-blur-xs rounded-full border border-green-400/30 cursor-pointer hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 flex space-x-1 items-center shadow-lg">
             <SaveSolidIcon />
             <span>Save</span>
           </button>

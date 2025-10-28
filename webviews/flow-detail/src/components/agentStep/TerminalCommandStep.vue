@@ -10,11 +10,14 @@
             <span class="whitespace-nowrap">{{ step.command }}</span>
         </div>
         <hr class="text-white/30 -mx-2">
-        <div v-if="step.output" class="text-gray-300">
+        <div v-if="step.output" class="text-gray-300 flex flex-col items-end">
             <button @click="toggleOutput"
-                class="text-xs text-white/70 hover:text-white font-semibold cursor-pointer flex space-x-2">
-                <span>{{ showOutput ? 'Hide' : 'Show' }} Output</span>
-                <div :class="[showOutput ? 'rotate-270' : 'rotate-90', 'transition-transform']">></div>
+                class="text-xs text-white/70 hover:text-white font-medium cursor-pointer flex space-x-1">
+                <span>{{ showOutput ? 'Hide' : 'Show' }} output</span>
+                <svg :class="[showOutput ? 'rotate-180' : '', 'transition-transform w-4 h-4']" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
             </button>
             <ExpandTransition>
                 <div v-if="showOutput" class="mt-1 border border-white/20 bg-white/5 rounded-lg p-2">
