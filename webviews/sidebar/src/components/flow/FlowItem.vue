@@ -49,11 +49,11 @@
         </div>
         <div class="w-20 hidden group-hover:flex space-x-1 items-center justify-end">
           <button @click.stop="handleRename"
-            class="p-1 hover:bg-gray-600/50 rounded transition-colors flex items-center justify-center">
+            class="p-1 hover:bg-gray-600/50 rounded transition-colors flex items-center justify-center cursor-pointer">
             <EditIcon class="text-sm" />
           </button>
           <button @click.stop="handleDelete"
-            class="p-1 hover:bg-red-600/50 rounded transition-colors flex items-center justify-center">
+            class="p-1 hover:bg-red-600/50 rounded transition-colors flex items-center justify-center cursor-pointer">
             <TrashIcon class="text-sm" />
           </button>
         </div>

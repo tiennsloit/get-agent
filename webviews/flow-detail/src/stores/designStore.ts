@@ -24,8 +24,6 @@ interface DesignState {
 
     // Blueprint state
     blueprint: string;
-    isEditing: boolean;
-    editableContent: string;
     blueprintGenerating: boolean;
     blueprintReady: boolean;
 
@@ -49,8 +47,6 @@ export const useDesignStore = defineStore('design', {
         messages: [],
         isAnalyzing: false,
         blueprint: '',
-        isEditing: false,
-        editableContent: '',
         blueprintGenerating: false,
         blueprintReady: false,
         explorerContext: {
@@ -142,34 +138,11 @@ export const useDesignStore = defineStore('design', {
         },
 
         /**
-         * Start editing mode
-         */
-        startEditing() {
-            this.isEditing = true;
-        },
-
-        /**
-         * Cancel editing and reset content
-         */
-        cancelEditing() {
-            this.isEditing = false;
-        },
-
-        /**
          * Save changes to blueprint
          */
-        saveChanges() {
+        saveChanges(content: string) {
             // TODO: Implement actual save functionality
-            this.isEditing = false;
-            // In a real implementation, you would save the content here
-            console.log('Saving changes:', this.editableContent);
-        },
-
-        /**
-         * Update editable content
-         */
-        updateEditableContent(content: string) {
-            this.editableContent = content;
+            console.log('Saving changes:', content);
         },
 
         /**
@@ -610,7 +583,6 @@ export const useDesignStore = defineStore('design', {
         handleBlueprintComplete() {
             this.blueprintGenerating = false;
             this.blueprintReady = true;
-            this.editableContent = this.blueprint;
             this.addMessage({
                 role: 'assistant',
                 type: 'log',
@@ -720,8 +692,6 @@ export const useDesignStore = defineStore('design', {
             this.messages = [];
             this.isAnalyzing = false;
             this.blueprint = '';
-            this.isEditing = false;
-            this.editableContent = '';
             this.blueprintGenerating = false;
             this.blueprintReady = false;
             this.explorerContext = {

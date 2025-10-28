@@ -23,14 +23,11 @@
             <p class="text-lg text-gray-300">Exploring codebase...</p>
 
             <!-- Replace the simple progress bar with ExplorationProgress component -->
-            <ExplorationProgress 
-              v-if="currentExplorerResponse"
+            <ExplorationProgress v-if="currentExplorerResponse"
               :understanding-level="currentExplorerResponse.understanding_level"
               :confidence-score="currentExplorerResponse.confidence_score"
-              :iteration="currentExplorerResponse.iteration"
-              :next-priorities="currentExplorerResponse.next_priorities"
-              class="mt-4"
-            />
+              :iteration="currentExplorerResponse.iteration" :next-priorities="currentExplorerResponse.next_priorities"
+              class="mt-4" />
           </div>
         </div>
 
@@ -43,8 +40,8 @@
       </template>
 
       <!-- Blueprint content -->
-      <VueMarkdown v-else-if="!isEditing" :markdown="blueprint" :custom-attrs="customAttrs"
-        class="text-xs vue-markdown" :rehype-plugins="[rehypeRaw]">
+      <VueMarkdown v-else-if="!isEditing" :markdown="blueprint" :custom-attrs="customAttrs" class="text-xs vue-markdown"
+        :rehype-plugins="[rehypeRaw]">
         <template #code="{ inline, content, ...props }">
           <code v-if="inline" style="color: rgb(230, 153, 191) !important">{{ content }}</code>
           <CodeBlock v-else :code="content" :classes="props.class" />
@@ -95,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed } from 'vue';
+import { onMounted, onUnmounted, computed, ref } from 'vue';
 import CodeBlock from "@/components/CodeBlock.vue";
 import { CustomAttrs, VueMarkdown } from "@crazydos/vue-markdown";
 import rehypeRaw from 'rehype-raw';
@@ -116,21 +113,16 @@ const flowStore = useFlowStore();
 const messages = computed(() => designStore.messages);
 const isAnalyzing = computed(() => designStore.isAnalyzing);
 const isExploring = computed(() => designStore.explorerContext.isExploring);
-const currentIteration = computed(() => designStore.explorerContext.currentIteration);
 const blueprint = computed(() => designStore.blueprint);
-const isEditing = computed(() => designStore.isEditing);
 const blueprintGenerating = computed(() => designStore.blueprintGenerating);
 const blueprintReady = computed(() => designStore.blueprintReady);
-const progressPercentage = computed(() => ((currentIteration.value / 20) * 100).toFixed(0));
 
 // New computed property to get the current explorer response
 const currentExplorerResponse = computed(() => designStore.explorerContext.previousResponse);
 
-// Use v-model for editable content
-const editableContent = computed({
-  get: () => designStore.editableContent,
-  set: (value: string) => designStore.updateEditableContent(value)
-});
+// Vars for blueprint editing
+const isEditing = ref(false);
+const editableContent = ref(blueprint.value || '');
 
 const customAttrs: CustomAttrs = {
   // use html tag name as key
@@ -152,15 +144,16 @@ onUnmounted(() => {
 });
 
 const startEditing = () => {
-  designStore.startEditing();
+  editableContent.value = blueprint.value || '';
+  isEditing.value = true;
 };
 
 const cancelEditing = () => {
-  designStore.cancelEditing();
+  isEditing.value = false;
 };
 
 const saveChanges = () => {
-  designStore.saveChanges();
+  designStore.saveChanges(editableContent.value);
 };
 
 const handleUserMessage = (message: string) => {
