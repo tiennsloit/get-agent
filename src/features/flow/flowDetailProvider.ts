@@ -11,6 +11,8 @@ import { DiContainer } from '../../core/di-container';
 import { INJECTION_KEYS } from '../../core/constants/injectionKeys';
 import type { FlowAnalysisResponse, ExplorerResponse, ActionResult, ExplorationHistory, CumulativeKnowledge } from '../../types/flowAnalysisTypes';
 import type { FlowDesignData } from '../../../shared/models/flow';
+import { FlowState } from '../../../shared/models/flow';
+import type { TodoResponse } from '../../../shared/models/api';
 import { ContextManager } from '../../managers/context/contextManager';
 
 export class FlowDetailProvider {
@@ -85,6 +87,10 @@ export class FlowDetailProvider {
 
           case 'startExecution':
             await this.handleStartExecution();
+            break;
+
+          case 'retryTodoGeneration':
+            await this.handleRetryTodoGeneration(message.data);
             break;
 
           case 'pauseExecution':
@@ -490,12 +496,110 @@ export class FlowDetailProvider {
    */
   private async handleStartExecution(): Promise<void> {
     try {
-      await this.flowExecutor.executeFlow(this.flowId);
+      console.log(`[FlowDetailProvider] Starting execution for flow ${this.flowId}`);
+
+      // Get flow data
+      const flow = await this.flowService.getFlow(this.flowId);
+      if (!flow) {
+        throw new Error('Flow not found');
+      }
+
+      // Validate blueprint is ready
+      if (!flow.designData?.blueprint) {
+        throw new Error('Blueprint not ready. Please generate blueprint first.');
+      }
+
+      // Update flow state to executing
+      await this.flowService.updateFlowState(this.flowId, FlowState.EXECUTING);
+
+      // Extract implementation goal from analysis context
+      const implementationGoal = flow.designData.analysisContext?.core_requirement?.main_objective || '';
+
+      // Generate TODO list from blueprint
+      console.log('[FlowDetailProvider] Generating TODO list from blueprint');
+      const todoResponse: TodoResponse = await this.flowService.generateTodoFromBlueprint(
+        flow.designData.blueprint,
+        implementationGoal
+      );
+
+      console.log(`[FlowDetailProvider] Generated ${todoResponse.items.length} TODO items`);
+
+      // Store TODO list in flow execution data
+      await this.flowService.updateFlowExecutionData(this.flowId, {
+        todoList: todoResponse.items,
+        currentTodoIndex: 0
+      });
+
+      // Notify webview of TODO generation
+      this.panel?.webview.postMessage({
+        command: 'todoGenerated',
+        data: { todoItems: todoResponse.items }
+      });
+
+      // Send updated flow data with new state
       this.sendFlowData();
+
+      console.log('[FlowDetailProvider] Execution started successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[FlowDetailProvider] Error starting execution:', error);
+
       this.panel?.webview.postMessage({
-        command: 'executionError',
+        command: 'todoError',
+        data: { error: errorMessage }
+      });
+    }
+  }
+
+  /**
+   * Handle retry TODO generation
+   */
+  private async handleRetryTodoGeneration(data: { flowId: string }): Promise<void> {
+    try {
+      console.log(`[FlowDetailProvider] Retrying TODO generation for flow ${data.flowId}`);
+
+      // Get flow data
+      const flow = await this.flowService.getFlow(data.flowId);
+      if (!flow) {
+        throw new Error('Flow not found');
+      }
+
+      // Validate blueprint is ready
+      if (!flow.designData?.blueprint) {
+        throw new Error('Blueprint not ready. Please generate blueprint first.');
+      }
+
+      // Extract implementation goal from analysis context
+      const implementationGoal = flow.designData.analysisContext?.core_requirement?.main_objective || '';
+
+      // Generate TODO list from blueprint
+      console.log('[FlowDetailProvider] Generating TODO list from blueprint');
+      const todoResponse: TodoResponse = await this.flowService.generateTodoFromBlueprint(
+        flow.designData.blueprint,
+        implementationGoal
+      );
+
+      console.log(`[FlowDetailProvider] Generated ${todoResponse.items.length} TODO items`);
+
+      // Store TODO list in flow execution data
+      await this.flowService.updateFlowExecutionData(data.flowId, {
+        todoList: todoResponse.items,
+        currentTodoIndex: 0
+      });
+
+      // Notify webview of TODO generation
+      this.panel?.webview.postMessage({
+        command: 'todoGenerated',
+        data: { todoItems: todoResponse.items }
+      });
+
+      console.log('[FlowDetailProvider] TODO generation retry successful');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[FlowDetailProvider] Error retrying TODO generation:', error);
+
+      this.panel?.webview.postMessage({
+        command: 'todoError',
         data: { error: errorMessage }
       });
     }

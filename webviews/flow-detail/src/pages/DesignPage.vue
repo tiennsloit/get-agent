@@ -66,7 +66,7 @@
           <EditSolidIcon />
           <span>Edit</span>
         </button>
-        <button v-if="!isEditing"
+        <button v-if="!isEditing" @click="handleStartExecution"
           class="px-3 py-1.5 bg-green-500/20 backdrop-blur-xs rounded-full border border-green-400/30 cursor-pointer hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 flex space-x-1 items-center shadow-lg">
           <PlaySolidIcon class="text-lg" />
           <span>Start</span>
@@ -101,6 +101,7 @@ import CloseSolidIcon from '@/components/icons/CloseSolidIcon.vue';
 import ChatMessagesContainer from '@/components/chat/ChatMessagesContainer.vue';
 import ChatInput from '@/components/chat/ChatInput.vue';
 import ExplorationProgress from '@/components/ExplorationProgress.vue';
+import { vscode } from '@/utilities/vscode';
 import { useDesignStore } from '@/stores/designStore';
 import { useFlowStore } from '@/stores/flowStore';
 
@@ -162,5 +163,16 @@ const handleUserMessage = (message: string) => {
 
 const handleStopExploration = () => {
   designStore.stopExploration();
+};
+
+const handleStartExecution = () => {
+  console.log('[DesignPage] Start execution clicked');
+  // Send command to extension to start execution
+  vscode.postMessage({
+    command: 'startExecution',
+    data: {
+      flowId: flowStore.currentFlow?.id || 'flow-123'
+    }
+  });
 };
 </script>

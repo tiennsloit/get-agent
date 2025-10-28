@@ -9,7 +9,8 @@ import type {
   Task, 
   ExecutionReport,
   FlowListItem,
-  FlowDesignData
+  FlowDesignData,
+  FlowExecutionData
 } from '../../../shared/models/flow';
 import { FlowState } from '../../../shared/models/flow';
 import { generateId } from '../../core/utilities/generateId';
@@ -186,6 +187,30 @@ export class FlowStateManager {
       // Merge updates into existing designData
       flow.designData = {
         ...flow.designData,
+        ...updates
+      };
+      
+      flow.lastUpdated = new Date().toISOString();
+      this.flows.set(flowId, flow);
+      this.saveFlowsToStorage();
+      this.notifyFlowUpdate(flowId);
+    }
+  }
+
+  /**
+   * Update flow execution data with partial updates
+   */
+  public updateFlowExecutionData(flowId: string, updates: Partial<FlowExecutionData>): void {
+    const flow = this.flows.get(flowId);
+    if (flow) {
+      // Initialize executionData if it doesn't exist
+      if (!flow.executionData) {
+        flow.executionData = {};
+      }
+      
+      // Merge updates into existing executionData
+      flow.executionData = {
+        ...flow.executionData,
         ...updates
       };
       

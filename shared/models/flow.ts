@@ -33,6 +33,24 @@ export interface TaskFile {
 }
 
 /**
+ * TODO item types for execution workflow
+ */
+export type TaskItem = {
+  type: 'task';
+  content: string;
+};
+
+export type PhaseItem = {
+  type: 'phase';
+  name: string;
+  tasks: string[];
+};
+
+export type TodoItem = TaskItem | PhaseItem;
+
+export type TodoState = 'todo' | 'doing' | 'done';
+
+/**
  * High-level task within a flow
  */
 export interface Task {
@@ -81,6 +99,15 @@ export interface FlowDesignData {
 }
 
 /**
+ * Execution data for flow detail persistence
+ */
+export interface FlowExecutionData {
+  todoList?: TodoItem[];
+  currentTodoIndex?: number;
+  agentSteps?: any[]; // AgentStep from execution
+}
+
+/**
  * Main Flow interface
  */
 export interface Flow {
@@ -95,6 +122,7 @@ export interface Flow {
   lastUpdated: string;
   executionReport?: ExecutionReport;
   designData?: FlowDesignData;
+  executionData?: FlowExecutionData;
 }
 
 /**

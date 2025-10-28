@@ -3,7 +3,8 @@ import type {
   CreateFlowRequest,
   FlowListItem,
   FlowProgress,
-  FlowDesignData
+  FlowDesignData,
+  FlowExecutionData
 } from '../../shared/models/flow';
 import { FlowState } from '../../shared/models/flow';
 import type {
@@ -15,13 +16,13 @@ import type {
   FlowExploreRequest,
   FlowBlueprintFromExplorationRequest,
   ExplorationSummary,
-  ProjectFile
+  ProjectFile,
+  TodoRequest,
+  TodoResponse
 } from '../../shared/models/api';
 import type {
   FlowAnalysisResponse,
   ExplorerResponse,
-  ActionType,
-  ActionResult,
   ExplorationHistory,
   CumulativeKnowledge
 } from '../types/flowAnalysisTypes';
@@ -44,6 +45,7 @@ export interface IFlowService {
   updateFlowState(flowId: string, state: FlowState): Promise<void>;
   updateFlowProgress(flowId: string, progress: FlowProgress): Promise<void>;
   updateFlowDesignData(flowId: string, updates: Partial<FlowDesignData>): Promise<void>;
+  updateFlowExecutionData(flowId: string, updates: Partial<FlowExecutionData>): Promise<void>;
 
   // Search & Filter
   searchFlows(query: string): Promise<FlowListItem[]>;
@@ -75,6 +77,12 @@ export interface IFlowService {
     cumulativeKnowledge: CumulativeKnowledge,
     analysisContext?: FlowAnalysisResponse
   ): Promise<ReadableStream<Uint8Array>>;
+
+  // TODO Generation from Blueprint
+  generateTodoFromBlueprint(
+    blueprintContent: string,
+    implementationGoal?: string
+  ): Promise<TodoResponse>;
 
   // Event Management
   onFlowUpdate(listener: (flowId?: string) => void): () => void;
@@ -153,6 +161,13 @@ export class FlowService implements IFlowService {
    */
   public async updateFlowDesignData(flowId: string, updates: Partial<FlowDesignData>): Promise<void> {
     this.flowStateManager.updateFlowDesignData(flowId, updates);
+  }
+
+  /**
+   * Update flow execution data
+   */
+  public async updateFlowExecutionData(flowId: string, updates: Partial<FlowExecutionData>): Promise<void> {
+    this.flowStateManager.updateFlowExecutionData(flowId, updates);
   }
 
   /**
@@ -477,6 +492,55 @@ ${task.contextFiles.length > 0 ? `**Context files:**\n${task.contextFiles.join('
       }
 
       throw error instanceof Error ? error : new Error('An unexpected error occurred during blueprint generation');
+    }
+  }
+
+  /**
+   * Generate TODO list from blueprint
+   */
+  public async generateTodoFromBlueprint(
+    blueprintContent: string,
+    implementationGoal?: string
+  ): Promise<TodoResponse> {
+    try {
+      // Validate input
+      if (!blueprintContent || blueprintContent.trim().length < 100) {
+        throw new Error('Blueprint content must be at least 100 characters');
+      }
+
+      // Build API request payload
+      const requestPayload: TodoRequest = {
+        blueprintContent: blueprintContent.trim(),
+        implementationGoal: implementationGoal?.trim()
+      };
+
+      // Call API
+      const response = await this.apiClient.post<TodoResponse>(
+        'flow/todo',
+        requestPayload
+      );
+
+      return response;
+    } catch (error) {
+      // Handle API errors with user-friendly messages
+      if (error instanceof ApiError) {
+        if (error.statusCode === 400) {
+          throw new Error(`Invalid request: ${error.message}`);
+        } else if (error.statusCode && error.statusCode >= 500) {
+          throw new Error('Server error. Please try again later.');
+        } else if (error.message.includes('timeout')) {
+          throw new Error('Request timeout. Please check your connection and try again.');
+        } else {
+          throw new Error(`API error: ${error.message}`);
+        }
+      }
+
+      // Re-throw other errors
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error('An unexpected error occurred during TODO generation');
     }
   }
 

@@ -181,3 +181,20 @@ export interface FlowSubtasksResponse {
     autoAdvance: boolean;
   }>;
 }
+
+/**
+ * Request to generate TODO list from blueprint
+ * Uses TodoItem types from flow.ts
+ */
+export interface TodoRequest {
+  blueprintContent: string;
+  implementationGoal?: string;
+}
+
+/**
+ * Response containing generated TODO list
+ * Uses TodoItem types from flow.ts
+ */
+export interface TodoResponse {
+  items: import('./flow').TodoItem[];
+}
