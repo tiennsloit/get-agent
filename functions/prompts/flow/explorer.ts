@@ -22,9 +22,10 @@ Available actions:
 CRITICAL CONSTRAINTS:
 - Maximum 20 iterations total - STOP when remaining_iterations <= 0
 - Focus on high-level architecture and key integration points only
-- Understanding level 0.7+ is sufficient for implementation planning
+- Understanding level 0.75+ with solid architectural confidence is sufficient for implementation planning
 - Avoid deep implementation details unless critical to the goal
-- Be efficient - each action should address specific unknowns
+- Be efficient - each action should resolve specific architectural unknowns
+- NEVER repeat an action already taken unless absolutely necessary
 
 Always respond in valid JSON format only.
 
@@ -74,6 +75,8 @@ Always respond in valid JSON format only.
   "remaining_iterations": "number (REQUIRED)"
 }
 
+**ENFORCEMENT RULE**: If understanding_level >= 0.75 AND confidence_score.architecture >= 0.65 AND confidence_score.integration_points >= 0.6 AND current_knowledge.unknowns.length <= 2, you MUST set "continue_exploration": false—even if remaining_iterations > 0.
+
 **CRITICAL**: ALL fields marked as REQUIRED must ALWAYS have a value. Use empty strings (""), empty arrays ([]), or empty objects ({}) when there's no data, but NEVER omit required fields or use null/undefined.`;
 
 export const assistantPrompt = `### EFFICIENT EXPLORATION PROTOCOL (20-STEP LIMIT)
@@ -84,19 +87,25 @@ export const assistantPrompt = `### EFFICIENT EXPLORATION PROTOCOL (20-STEP LIMI
 - If remaining_iterations <= 0, set continue_exploration to false IMMEDIATELY
 
 [STEP 2: PROGRESSIVE UNDERSTANDING]
-- Start at 0.1 understanding, increase by 0.15-0.25 per meaningful discovery
-- Target understanding_level 0.7-0.8 for completion (not perfection)
+- Start at understanding_level = 0.1
+- ONLY increase understanding_level when:
+  • A new architectural component is confirmed (e.g., entry point, core module, external service)
+  • A major unknown is resolved (removed from unknowns)
+- Maximum increase per iteration: 0.20
+- Do NOT increase for minor details (e.g., variable names, helper functions)
+- Target understanding_level 0.75–0.80 for completion (not perfection)
 - Update confidence scores based on architectural evidence only:
-  * architecture: 0.2 when main structure understood
-  * data_flow: 0.2 when key inputs/outputs mapped
-  * integration_points: 0.2 when external dependencies identified
-  * implementation_details: Keep low (0.1-0.3) unless critical
+  * architecture: ≥0.6 when main structure and entry points are known
+  * data_flow: ≥0.5 when key inputs/outputs and state flow are mapped
+  * integration_points: ≥0.6 when external APIs, databases, or services are identified
+  * implementation_details: Keep low (0.1–0.3) unless critical to the goal
 
 [STEP 3: FOCUSED KNOWLEDGE BUILDING]
 - Track ONLY high-impact confirmed facts
 - Focus unknowns on architectural blocks, not implementation details
-- Avoid exploring test files, config files unless directly relevant
+- Avoid exploring test files, config files, or docs unless directly relevant to {{ implementation_goal }}
 - Prioritize: entry points → core modules → key integration files
+- If current_knowledge.confirmed has not changed in the last 2 iterations, assume stagnation
 
 [STEP 4: STRATEGIC ACTION SELECTION]  
 - Use list_directory for root and key directories only
@@ -107,32 +116,35 @@ export const assistantPrompt = `### EFFICIENT EXPLORATION PROTOCOL (20-STEP LIMI
   Format: { "type": "read_file", "parameters": { "path": "src/main.ts" } }
   REQUIRED: "path" must be a non-empty string with valid file path
   
-- Use search_content for specific patterns (API routes, main functions)
+- Use search_content for specific patterns (API routes, main functions, service calls)
   Format: { "type": "search_content", "parameters": { "query": "API routes", "scope": "src/" } }
   REQUIRED: "query" must be a non-empty string, "scope" is optional
   
-- Use read_terminal for project structure exploration
+- Use read_terminal for high-level project structure (e.g., "find . -name package.json")
   Format: { "type": "read_terminal", "parameters": { "command": "ls -la" } }
   REQUIRED: "command" must be a non-empty string
   
-- Skip deeply nested exploration
+- NEVER repeat an action already present in exploration_history unless critical
 
 **CRITICAL**: All action parameters marked as REQUIRED must be provided. The system will reject responses with missing required parameters.
 
 [STEP 5: EARLY COMPLETION CRITERIA]
-- Set continue_exploration to false when:
-  * understanding_level >= 0.7 AND
-  * architecture confidence >= 0.6 AND
-  * key integration points identified
-- OR when remaining_iterations <= 0
-- Accept that some implementation details will remain unknown
+- Set continue_exploration to false IMMEDIATELY if ANY of the following is true:
+  a) remaining_iterations <= 0
+  b) understanding_level >= 0.75 AND 
+     confidence_score.architecture >= 0.65 AND 
+     confidence_score.integration_points >= 0.6 AND 
+     current_knowledge.unknowns.length <= 2
+  c) The last 2 iterations added no new items to current_knowledge.confirmed (stagnation detected)
+- It is expected and preferred to stop BEFORE iteration 20 when sufficient understanding is reached
+- Accept that some implementation details will remain unknown—this is intentional
 
 ### OUTPUT INSTRUCTIONS
 - Output ONLY valid JSON object with the specified structure
 - No markdown, no explanations
 - ALL required fields must have values - use empty strings/arrays/objects when there's no data
 - NEVER use null or undefined for required fields
-- Be strategic and time-conscious in assessments
+- Be strategic, time-conscious, and architecture-focused in all assessments
 `;
 
 export const codeExploreUserPrompt = `### CONTEXT
@@ -161,17 +173,18 @@ Remaining Iterations: {{ 20 - current_iteration }}
   * External integration points
   * Data flow high-level patterns
 - Skip deep implementation details unless critical to {{ implementation_goal }}
-- Target understanding_level 0.7-0.8 - this is sufficient for implementation planning
+- Target understanding_level 0.75–0.80 - this is sufficient for implementation planning
 - Stop when you can describe the system architecture and key components
+- If your planned action (file/path/command) was already executed in exploration_history, DO NOT repeat it
+- If current_knowledge.unknowns has not changed in the last 2 iterations, strongly consider stopping
 
 ### REQUEST
 Analyze the codebase efficiently to build sufficient architectural understanding for creating an implementation plan.
 
 For this iteration:
-1. Check remaining iterations - stop if <= 0
-2. Focus on resolving 1-2 key architectural unknowns
-3. Avoid re-exploring known areas
-4. Consider stopping if understanding_level >= 0.7 and architecture is reasonably clear
-
-Return only the JSON object for this iteration.
+1. Check if remaining_iterations <= 0 → if yes, set continue_exploration = false
+2. Evaluate if early completion criteria are met (see assistant protocol)
+3. Focus on resolving 1–2 key architectural unknowns
+4. Avoid re-exploring known areas
+5. Return only the JSON object for this iteration.
 `;
