@@ -38,17 +38,19 @@ export interface TaskFile {
 export type TaskItem = {
   type: 'task';
   content: string;
+  status?: TodoState;
 };
 
 export type PhaseItem = {
   type: 'phase';
   name: string;
   tasks: string[];
+  status?: TodoState;
 };
 
 export type TodoItem = TaskItem | PhaseItem;
 
-export type TodoState = 'todo' | 'doing' | 'done';
+export type TodoState = 'todo' | 'inprogress' | 'done';
 
 /**
  * High-level task within a flow

@@ -85,6 +85,10 @@ export class FlowDetailProvider {
             this.handleUpdateFlowState(message.data);
             break;
 
+          case 'updateProgress':
+            await this.handleUpdateProgress(message.data);
+            break;
+
           case 'startExecution':
             await this.handleStartExecution();
             break;
@@ -492,6 +496,17 @@ export class FlowDetailProvider {
   }
 
   /**
+   * Handle progress update from webview
+   */
+  private async handleUpdateProgress(data: { done: number; total: number }): Promise<void> {
+    await this.flowService.updateFlowProgress(this.flowId, {
+      done: data.done,
+      total: data.total
+    });
+    console.log(`[FlowDetailProvider] Progress updated: ${data.done}/${data.total}`);
+  }
+
+  /**
    * Handle start execution
    */
   private async handleStartExecution(): Promise<void> {
@@ -509,14 +524,22 @@ export class FlowDetailProvider {
         throw new Error('Blueprint not ready. Please generate blueprint first.');
       }
 
-      // Update flow state to executing
+      // 1. Update flow state to executing FIRST
       await this.flowService.updateFlowState(this.flowId, FlowState.EXECUTING);
+      console.log('[FlowDetailProvider] Flow state updated to EXECUTING');
 
-      // Extract implementation goal from analysis context
-      const implementationGoal = flow.designData.analysisContext?.core_requirement?.main_objective || '';
+      // 2. Send updated flow data to transition to Execute page (step 2)
+      this.sendFlowData();
 
-      // Generate TODO list from blueprint
+      // 3. Notify webview to start loading state
+      this.panel?.webview.postMessage({
+        command: 'todoGenerationStarted',
+        data: {}
+      });
+
+      // 4. Generate TODO list from blueprint
       console.log('[FlowDetailProvider] Generating TODO list from blueprint');
+      const implementationGoal = flow.designData.analysisContext?.core_requirement?.main_objective || '';
       const todoResponse: TodoResponse = await this.flowService.generateTodoFromBlueprint(
         flow.designData.blueprint,
         implementationGoal
@@ -524,19 +547,25 @@ export class FlowDetailProvider {
 
       console.log(`[FlowDetailProvider] Generated ${todoResponse.items.length} TODO items`);
 
-      // Store TODO list in flow execution data
+      // 5. Store TODO list in flow execution data and update progress
       await this.flowService.updateFlowExecutionData(this.flowId, {
         todoList: todoResponse.items,
         currentTodoIndex: 0
       });
 
-      // Notify webview of TODO generation
+      // Update progress total based on TODO count
+      await this.flowService.updateFlowProgress(this.flowId, {
+        done: 0,
+        total: todoResponse.items.length
+      });
+
+      // 6. Notify webview of TODO generation
       this.panel?.webview.postMessage({
         command: 'todoGenerated',
         data: { todoItems: todoResponse.items }
       });
 
-      // Send updated flow data with new state
+      // 7. Send final updated flow data with progress
       this.sendFlowData();
 
       console.log('[FlowDetailProvider] Execution started successfully');
@@ -557,6 +586,12 @@ export class FlowDetailProvider {
   private async handleRetryTodoGeneration(data: { flowId: string }): Promise<void> {
     try {
       console.log(`[FlowDetailProvider] Retrying TODO generation for flow ${data.flowId}`);
+
+      // Notify webview to start loading state
+      this.panel?.webview.postMessage({
+        command: 'todoGenerationStarted',
+        data: {}
+      });
 
       // Get flow data
       const flow = await this.flowService.getFlow(data.flowId);
@@ -587,11 +622,20 @@ export class FlowDetailProvider {
         currentTodoIndex: 0
       });
 
+      // Update progress total based on TODO count
+      await this.flowService.updateFlowProgress(data.flowId, {
+        done: 0,
+        total: todoResponse.items.length
+      });
+
       // Notify webview of TODO generation
       this.panel?.webview.postMessage({
         command: 'todoGenerated',
         data: { todoItems: todoResponse.items }
       });
+
+      // Send updated flow data
+      this.sendFlowData();
 
       console.log('[FlowDetailProvider] TODO generation retry successful');
     } catch (error) {

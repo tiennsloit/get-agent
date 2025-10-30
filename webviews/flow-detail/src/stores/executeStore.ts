@@ -59,11 +59,18 @@ export const useExecuteStore = defineStore('execute', {
          * Get TODO state for an item by index
          */
         getTodoState() {
-            return (index: number): 'todo' | 'doing' | 'done' => {
+            return (index: number): 'todo' | 'inprogress' | 'done' => {
+                // First check if the item has its own status
+                const item = this.todoItems[index];
+                if (item?.status) {
+                    return item.status;
+                }
+                
+                // Otherwise, calculate based on current index
                 if (index < this.currentTodoIndex) {
                     return 'done';
                 } else if (index === this.currentTodoIndex) {
-                    return 'doing';
+                    return 'inprogress';
                 } else {
                     return 'todo';
                 }
@@ -91,21 +98,84 @@ export const useExecuteStore = defineStore('execute', {
          * Set TODO items from API response
          */
         setTodoItems(items: TodoItem[]) {
-            this.todoItems = items;
+            // Initialize all items with 'todo' status if not set
+            this.todoItems = items.map(item => ({
+                ...item,
+                status: item.status || 'todo'
+            }));
             this.currentTodoIndex = 0; // Start with first item
+            // Set first item to inprogress
+            if (this.todoItems.length > 0) {
+                this.todoItems[0].status = 'inprogress';
+            }
             this.isLoadingTodos = false;
             this.todoError = null;
             console.log(`[ExecuteStore] TODO items set: ${items.length} items`);
         },
 
         /**
-         * Update current TODO index
+         * Update current TODO index and status
          */
         setCurrentTodoIndex(index: number) {
             if (index >= 0 && index < this.todoItems.length) {
+                // Mark previous items as done
+                for (let i = 0; i < index; i++) {
+                    this.todoItems[i].status = 'done';
+                }
+                // Mark current item as inprogress
+                this.todoItems[index].status = 'inprogress';
+                // Mark future items as todo
+                for (let i = index + 1; i < this.todoItems.length; i++) {
+                    this.todoItems[i].status = 'todo';
+                }
                 this.currentTodoIndex = index;
                 console.log(`[ExecuteStore] Current TODO index updated to: ${index}`);
             }
+        },
+
+        /**
+         * Mark a TODO item as complete and move to next
+         */
+        completeTodoItem(index: number) {
+            if (index >= 0 && index < this.todoItems.length) {
+                this.todoItems[index].status = 'done';
+                // Move to next item if available
+                if (index + 1 < this.todoItems.length) {
+                    this.setCurrentTodoIndex(index + 1);
+                }
+                // Sync progress to extension
+                this.syncProgressToExtension();
+            }
+        },
+
+        /**
+         * Update status of a specific TODO item
+         */
+        updateTodoItemStatus(index: number, status: 'todo' | 'inprogress' | 'done') {
+            if (index >= 0 && index < this.todoItems.length) {
+                this.todoItems[index].status = status;
+                console.log(`[ExecuteStore] TODO item ${index} status updated to: ${status}`);
+                // Sync progress to extension
+                this.syncProgressToExtension();
+            }
+        },
+
+        /**
+         * Sync progress count to extension
+         */
+        syncProgressToExtension() {
+            const doneCount = this.todoItems.filter(item => item.status === 'done').length;
+            const totalCount = this.todoItems.length;
+            
+            vscode.postMessage({
+                command: 'updateProgress',
+                data: {
+                    done: doneCount,
+                    total: totalCount
+                }
+            });
+            
+            console.log(`[ExecuteStore] Progress synced: ${doneCount}/${totalCount}`);
         },
 
         /**
@@ -285,6 +355,9 @@ export const useExecuteStore = defineStore('execute', {
                 console.log('[ExecuteStore] Received message:', message.command);
                 
                 switch (message.command) {
+                    case 'todoGenerationStarted':
+                        this.setLoadingTodos(true);
+                        break;
                     case 'todoGenerated':
                         this.handleTodoGenerated(message.data);
                         break;

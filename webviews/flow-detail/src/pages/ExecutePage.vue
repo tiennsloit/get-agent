@@ -1,10 +1,10 @@
 <template>
-    <div class="flex-1 w-full px-6 py-4 flex-1 flex space-x-4">
-        <div class="p-4 border border-gray-500/30 h-fit w-96 rounded-2xl">
+    <div class="flex-1 px-6 py-4 flex-1 flex space-x-4">
+        <div class="p-4 border border-gray-500/30 h-fit h-full rounded-2xl overflow-x-hidden">
             <div class="text-lg font-semibold mb-4">Todos</div>
 
             <!-- Loading state for TODO list -->
-            <div v-if="isLoadingTodos" class="h-full w-full space-y-4 animate-pulse overflow-hidden">
+            <div v-if="isLoadingTodos" class="h-full w-full space-y-4 animate-pulse">
                 <div v-for="i in 5" :key="i" class="w-full h-10 bg-gray-500/30 rounded-lg"></div>
             </div>
 
@@ -18,18 +18,18 @@
             </div>
 
             <!-- TODO list -->
-            <div v-else-if="todoItems.length > 0" class="h-full w-full space-y-2 overflow-hidden">
+            <div v-else-if="todoItems.length > 0"
+                class="max-h-full w-96 pb-10 space-y-2 flex flex-col overflow-y-auto -mx-4 px-4 text-xs">
                 <template v-for="(item, index) in todoItems" :key="index">
                     <!-- Simple task item -->
                     <div v-if="item.type === 'task'"
-                        class="rounded-lg flex items-center space-x-2 cursor-pointer hover:text-white"
-                        :class="{
-                            'text-white': getTodoState(index) === 'doing',
+                        class="rounded-lg flex items-center space-x-2 cursor-pointer hover:text-white" :class="{
+                            'text-white': getTodoState(index) === 'inprogress',
                             'text-white/50': ['done', 'todo'].includes(getTodoState(index))
                         }">
-                        <div v-if="getTodoState(index) === 'todo'"
-                            class="h-3 w-3 rounded-full border border-white/30"></div>
-                        <div v-else-if="getTodoState(index) === 'doing'"
+                        <div v-if="getTodoState(index) === 'todo'" class="h-3 w-3 rounded-full border border-white/30">
+                        </div>
+                        <div v-else-if="getTodoState(index) === 'inprogress'"
                             class="h-3 w-3 rounded-full border border-white/30 border-t-white animate-spin">
                         </div>
                         <div v-else-if="getTodoState(index) === 'done'"
@@ -40,11 +40,11 @@
                     </div>
 
                     <!-- Phase item with nested tasks -->
-                    <div v-else-if="item.type === 'phase'" class="space-y-2">
+                    <div v-else-if="item.type === 'phase'" class="space-y-2 grow">
                         <div class="font-semibold text-white/80 flex items-center space-x-2">
                             <div v-if="getTodoState(index) === 'todo'"
                                 class="h-3 w-3 rounded-full border border-white/30"></div>
-                            <div v-else-if="getTodoState(index) === 'doing'"
+                            <div v-else-if="getTodoState(index) === 'inprogress'"
                                 class="h-3 w-3 rounded-full border border-white/30 border-t-white animate-spin">
                             </div>
                             <div v-else-if="getTodoState(index) === 'done'"
@@ -53,10 +53,11 @@
                             </div>
                             <span>{{ item.name }}</span>
                         </div>
-                        <div class="ml-5 space-y-1">
+                        <div class="pl-4 space-y-1">
                             <div v-for="(task, taskIndex) in item.tasks" :key="taskIndex"
-                                class="text-sm text-white/50">
-                                • {{ task }}
+                                class="text-xs text-white/50 flex space-x-2">
+                                <div class="h-3 w-3 mt-1 flex-none rounded-full border border-white/30"></div>
+                                <div class="grow">{{ task }}</div>
                             </div>
                         </div>
                     </div>
@@ -102,7 +103,6 @@ import CheckSolidIcon from '@/components/icons/CheckSolidIcon.vue';
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
 import { useExecuteStore } from '@/stores/executeStore';
 import { useFlowStore } from '@/stores/flowStore';
-import { vscode } from '@/utilities/vscode';
 
 const executeStore = useExecuteStore();
 const flowStore = useFlowStore();
@@ -118,7 +118,7 @@ const isExecuting = computed(() => executeStore.isExecuting);
 const scrollContainer = ref<HTMLElement | null>(null);
 
 // Get TODO state helper
-const getTodoState = (index: number): 'todo' | 'doing' | 'done' => {
+const getTodoState = (index: number): 'todo' | 'inprogress' | 'done' => {
     return executeStore.getTodoState(index);
 };
 
