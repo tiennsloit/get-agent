@@ -10,7 +10,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from "vue";
 import mermaid from 'mermaid';
-import { throttle } from "@/utilities/throttle";
+import { debounce } from "@/utilities/debounce";
 
 // Props
 const props = defineProps<{
@@ -34,23 +34,23 @@ onMounted(() => {
   // Render the diagram after the component is mounted
   if (props.code) {
     nextTick(() => {
-      renderDiagram(props.code);
+      debouncedRender(props.code);
     });
   }
 });
 
-// Render diagram when code changes
+// Render diagram when code changes (debounced to avoid excessive re-renders during streaming)
 watch(
   () => props.code,
   (newCode) => {
     if (newCode) {
-      renderDiagram(newCode);
+      debouncedRender(newCode);
     }
   }
 );
 
-// Render Mermaid diagram with 1-second throttle
-const renderDiagram = throttle(async (definition: string) => {
+// Render Mermaid diagram
+const renderDiagram = async (definition: string) => {
   try {
     // Wait for the ref to be available
     if (!mermaidRef.value) {
@@ -125,5 +125,8 @@ const renderDiagram = throttle(async (definition: string) => {
       } catch (fallbackError) { }
     }
   }
-}, 1000);
+};
+
+// Debounced version to avoid excessive re-renders during streaming
+const debouncedRender = debounce(renderDiagram, 300);
 </script>
