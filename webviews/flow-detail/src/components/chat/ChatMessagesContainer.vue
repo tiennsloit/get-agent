@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 overflow-y-auto mb-4 max-h-[calc(100vh-200px)]">
+  <div ref="scrollContainer" class="flex-1 overflow-y-auto mb-4 max-h-[calc(100vh-200px)]">
     <div v-if="messages.length === 0" class="w-full h-full flex flex-col space-y-2 items-center justify-center text-center">
       <h1 class="text-2xl font-medium">
         What can GoNext help you with?
@@ -24,6 +24,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue';
 import UserMessage from '@/components/UserMessage.vue';
 import LogStep from "@/components/agentStep/LogStep.vue";
 import ThoughtStep from "@/components/agentStep/ThoughtStep.vue";
@@ -37,7 +38,30 @@ interface ChatMessage {
   metadata?: any;
 }
 
-defineProps<{
+const props = defineProps<{
   messages: ChatMessage[];
 }>();
+
+const scrollContainer = ref<HTMLElement | null>(null);
+
+// Scroll to bottom function
+const scrollToBottom = () => {
+  if (scrollContainer.value) {
+    nextTick(() => {
+      scrollContainer.value!.scrollTop = scrollContainer.value!.scrollHeight;
+    });
+  }
+};
+
+// Watch for messages changes and auto-scroll
+watch(
+  () => props.messages,
+  () => {
+    scrollToBottom();
+  },
+  {
+    deep: true,
+    flush: 'post'
+  }
+);
 </script>
