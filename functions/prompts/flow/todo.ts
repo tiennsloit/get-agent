@@ -121,7 +121,7 @@ export const assistantPrompt = `### INTERNAL REASONING PROTOCOL
   * Phase 2: Service/Business Logic Implementation
   * Phase 3: API/Interface Implementation
   * Phase 4: Testing and Validation
-  * Phase 5: Integration and Deployment (if applicable)
+- Do NOT include any deployment, release, or production rollout phases—even if mentioned in the blueprint
 - Determine if task complexity warrants phase grouping or simple task list
 
 [STEP 3: TASK DECOMPOSITION]
@@ -135,6 +135,7 @@ export const assistantPrompt = `### INTERNAL REASONING PROTOCOL
   * Create tasks for each component specification
   * Generate tasks for integration points
 - Avoid creating tasks for informational sections (Overview, Risk Factors)
+- Skip any task related to deployment, CI/CD pipelines, server provisioning, or production release
 
 [STEP 4: TASK ENRICHMENT]
 - Enhance each task with:
@@ -176,6 +177,7 @@ export const assistantPrompt = `### INTERNAL REASONING PROTOCOL
 5. **Appropriate Granularity**: Tasks are meaningful work units, not too granular or broad
 6. **Phase Coherence**: Phases group related tasks toward common goal
 7. **No Redundancy**: Each task appears once, no duplicates
+8. **No Deployment**: Absolutely no tasks related to deployment, hosting, or release processes
 
 ### OUTPUT INSTRUCTIONS
 - Output ONLY the JSON object with structure: { "items": [...] }
