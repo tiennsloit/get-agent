@@ -132,8 +132,11 @@ export const useDesignStore = defineStore('design', {
 
         /**
          * Clean up - remove message listener
+         * Note: Does NOT reset state to allow navigation between steps
          */
         cleanup() {
+            console.log('[DesignStore] Cleanup called - removing message listener only');
+            // Only remove message listener, keep state intact for navigation
             this.removeMessageListener();
         },
 

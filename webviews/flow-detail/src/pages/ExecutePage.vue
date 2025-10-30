@@ -100,7 +100,7 @@
 <script setup lang="ts">
 import AgentStep from '@/components/agentStep/AgentStep.vue';
 import CheckSolidIcon from '@/components/icons/CheckSolidIcon.vue';
-import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
+import { ref, nextTick, watch, computed } from 'vue';
 import { useExecuteStore } from '@/stores/executeStore';
 import { useFlowStore } from '@/stores/flowStore';
 
@@ -147,14 +147,6 @@ const handleRetryTodoGeneration = () => {
     const flowId = flowStore.currentFlow?.id || 'flow-123';
     executeStore.retryTodoGeneration(flowId);
 };
-
-onMounted(() => {
-    executeStore.initialize();
-});
-
-onUnmounted(() => {
-    executeStore.cleanup();
-});
 </script>
 
 <style scoped>

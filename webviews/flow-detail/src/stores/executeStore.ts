@@ -89,8 +89,11 @@ export const useExecuteStore = defineStore('execute', {
 
         /**
          * Clean up - remove message listener
+         * Note: Does NOT reset state to allow navigation between steps
          */
         cleanup() {
+            console.log('[ExecuteStore] Cleanup called - removing message listener only');
+            // Only remove message listener, keep state intact for navigation
             this.removeMessageListener();
         },
 

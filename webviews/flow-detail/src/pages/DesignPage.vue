@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, ref } from 'vue';
+import { computed, ref } from 'vue';
 import CodeBlock from "@/components/CodeBlock.vue";
 import { CustomAttrs, VueMarkdown } from "@crazydos/vue-markdown";
 import rehypeRaw from 'rehype-raw';
@@ -133,14 +133,6 @@ const customAttrs: CustomAttrs = {
   ol: { class: ['ml-2 my-2'] },
   hr: { class: ['my-4 opacity-50'] }
 }
-
-onMounted(() => {
-  designStore.initialize();
-})
-
-onUnmounted(() => {
-  designStore.cleanup();
-});
 
 const startEditing = () => {
   editableContent.value = blueprint.value || '';

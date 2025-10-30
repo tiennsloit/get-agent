@@ -55,8 +55,9 @@ const getConnectorState = (position: number): 'waiting' | 'active' | 'done' => {
 };
 
 const handleStepClick = (step: number) => {
-    // Only allow navigation to steps that are either done or the next step
-    if (step <= props.currentStep || step === props.currentStep + 1) {
+    // Allow navigation to any step that is active or completed
+    // This allows users to switch between steps without stopping tasks
+    if (step <= props.currentStep) {
         emit('stepChange', step);
     }
 };
