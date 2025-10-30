@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { useFlowStore } from '../stores/flowStore';
 import FlowStepperNode from './FlowStepperNode.vue';
 import FlowStepperConnector from './FlowStepperConnector.vue';
 
@@ -40,14 +40,29 @@ interface Props {
 
 const props = defineProps<Props>();
 const emit = defineEmits(['stepChange']);
+const flowStore = useFlowStore();
 
 const getStepState = (step: number): 'waiting' | 'active' | 'done' => {
-    if (step < props.currentStep) return 'done';
+    const maxAvailable = flowStore.maxAvailableStep;
+    
+    // Steps beyond maxAvailable are waiting
+    if (step > maxAvailable) return 'waiting';
+    
+    // Current step is active
     if (step === props.currentStep) return 'active';
+    
+    // Steps before current and within available range are done
+    if (step < props.currentStep) return 'done';
+    
     return 'waiting';
 };
 
 const getConnectorState = (position: number): 'waiting' | 'active' | 'done' => {
+    const maxAvailable = flowStore.maxAvailableStep;
+    
+    // Connector after the max available step is waiting
+    if (position >= maxAvailable) return 'waiting';
+    
     // Connectors are "done" if the next step is active or done
     if (props.currentStep > position) return 'done';
     if (props.currentStep === position) return 'active';
@@ -55,10 +70,13 @@ const getConnectorState = (position: number): 'waiting' | 'active' | 'done' => {
 };
 
 const handleStepClick = (step: number) => {
-    // Allow navigation to any step that is active or completed
-    // This allows users to switch between steps without stopping tasks
-    if (step <= props.currentStep) {
+    // Only allow navigation to steps within the available range based on flow state
+    const maxAvailable = flowStore.maxAvailableStep;
+    
+    if (step <= maxAvailable) {
         emit('stepChange', step);
+    } else {
+        console.log('[FlowStepper] Cannot navigate to step', step, '- not available yet (max:', maxAvailable, ')');
     }
 };
 </script>
